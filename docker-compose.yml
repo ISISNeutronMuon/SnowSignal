@@ -1,0 +1,27 @@
+services:
+    server:
+        image: snowsignal
+        build:
+            context: ./snowsignal
+        command: "sleep infinity"
+        volumes:
+            - .:/src/
+        networks:
+            - udptest
+
+    client:
+        image: python:3.11-slim
+        command: "sleep infinity"
+        volumes:
+            - .:/src/
+        networks:
+            - udptest
+
+    p4p:
+        image: harbor.stfc.ac.uk/isis-accelerator-controls/internal-pvagw-tests@sha256:ea128bdf47fc740d28ed32bf7c77ad122d824d550d2b3b0057e7c29045155f9f
+        command: "sleep infinity"
+        networks:
+            - udptest
+
+networks:
+    udptest:

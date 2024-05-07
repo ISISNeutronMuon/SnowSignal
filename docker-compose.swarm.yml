@@ -1,0 +1,19 @@
+services:
+  backplane:
+    image: 127.0.0.1:5000/backplane
+    build: 
+      context: ./backplane
+    environment:
+      SERVICENAME: '{{.Service.Name}}'
+    networks:
+      - udptunnel-test
+    deploy: 
+      # mode: global
+      # placement:
+      #   max_replicas_per_node: 3
+      mode: replicated
+      replicas: 2 
+
+networks:
+  udptunnel-test:
+    external: true
