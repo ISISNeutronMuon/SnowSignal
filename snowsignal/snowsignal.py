@@ -46,6 +46,9 @@ def get_ips_from_name(name: str) -> list[ipaddress.ip_address]:
         else:
             raise RuntimeError(f"Unknown AddressFamily {addfamily}")
 
+    # Remove duplicates and return
+    ips = list(set(ips))
+
     return ips
 
 
@@ -89,10 +92,10 @@ def discover_relays() -> list[ipaddress.ip_address]:
     # endpoint_mode is set and will only list the other containers and not
     # include the Virtual IP (VIP)
     task_ips = get_ips_from_name(f"tasks.{stack_and_task}")
-    logger.debug("\tTasks in {stack_and_task} have IP address(es) %s:", task_ips)
+    logger.debug("\tTasks in %s have IP address(es) %s:", stack_and_task, task_ips)
 
     # We don't want to communicate with ourself
-    valid_ips = task_ips - local_ips
+    valid_ips = list(set(task_ips) - set(local_ips))
     logger.info("\tDiscovered relays: %s", valid_ips)
 
     return valid_ips
@@ -250,6 +253,7 @@ class PVAccessSniffer:
         # matter if there's a race condition from making a change we might
         # as well minimise the risk anyway
         if remote_relays != self.remote_relays:
+            logger.info('Updating remote relays, will use %s', remote_relays)
             self.remote_relays = remote_relays
 
 
@@ -269,7 +273,7 @@ async def main():
     local_addr = psutil.net_if_addrs()['eth0'][0].address
 
     if swarmmode:
-        pvasniffer = PVAccessSniffer(discover_relays())
+        pvasniffer = PVAccessSniffer(remote_relays=discover_relays())
     else:
         pvasniffer = PVAccessSniffer(remote_relays=[local_addr])
     pvasniffer.start()
@@ -280,6 +284,7 @@ async def main():
         while True:
             # Every 10 seconds change if the configuration of the remote relays has changed
             await asyncio.sleep(10)
+            logger.info('Checking if relays need updating')
             if swarmmode:
                 pvasniffer.set_remote_relays(discover_relays())
     finally:
