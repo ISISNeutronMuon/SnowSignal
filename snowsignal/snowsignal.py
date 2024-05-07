@@ -88,7 +88,6 @@ def discover_relays() -> list[ipaddress.ip_address]:
     # Establish the IP address(es) of this container
     # This is a bit of a hack but is apparently the most portable way
     local_ips = get_localhost_ips()
-    logging.debug("\tThis system has IP address(es) %s:", local_ips)
 
     # Get the list of IP addresses in this stack
     # First get the environment variable we're using to identify our stack
@@ -108,7 +107,7 @@ def discover_relays() -> list[ipaddress.ip_address]:
 
     # We don't want to communicate with ourself
     valid_ips = list(set(task_ips) - set(local_ips))
-    logger.info("\tDiscovered relays: %s", valid_ips)
+    logger.debug("\tDiscovered relays: %s", valid_ips)
 
     return valid_ips
 
@@ -146,7 +145,7 @@ class UDPBroadcastRelayServerProtocol:
         # Reconstitute the raw data back into a scapy packet. Note that we start
         # at the bottommost layer and the higher layers ought to be build
         # automatically
-        # TODO: URGENT! What happens if we receive data that can't be turned 
+        # TODO: URGENT! What happens if we receive data that can't be turned
         # into a scapy packet?
         try:
             packet = scapy.layers.l2.Ether(data)
@@ -209,6 +208,9 @@ class PVAccessSniffer:
         remote_relays: list[ipaddress.ip_address] = None,
         remote_port=8888,
     ):
+        logger.info("Initialising PVASniffer listening for UDP broadcasts "
+                    "on port %i for relay to remote relays %s on port %i",
+                    local_port, remote_relays, remote_port)
         self.local_port = local_port
         self.remote_port = remote_port
         self.remote_relays = remote_relays
@@ -244,9 +246,9 @@ class PVAccessSniffer:
                 s.sendto(pkt_raw, (str(remote_relay), self.remote_port))
         else:
             logger.debug(
-                "Received message with banned hash from address %s; "
+                "Received message with banned hash %s from address %s; "
                 "banned to prevent loops / packet storms",
-                packet[scapy.layers.inet.IP].src,
+                packet_hash, packet[scapy.layers.inet.IP].src,
             )
 
     def _is_broadcast(self, packet: scapy.packet.Packet):
