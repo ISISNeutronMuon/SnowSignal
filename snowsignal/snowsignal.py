@@ -241,7 +241,7 @@ class PVAccessSniffer:
                     remote_relay, self.remote_port, pkt_raw,
                 )
                 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                s.sendto(pkt_raw, (remote_relay, self.remote_port))
+                s.sendto(pkt_raw, (str(remote_relay), self.remote_port))
         else:
             logger.debug(
                 "Received message with banned hash from address %s; "
