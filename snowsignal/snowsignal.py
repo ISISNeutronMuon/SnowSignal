@@ -33,6 +33,18 @@ logging.basicConfig(encoding="utf-8", level=LOGLEVEL)
 recent_packets = cachetools.TTLCache(maxsize=256 * 256, ttl=1)
 
 
+def is_swarmmode() -> bool:
+    ''' Crude check to see if we're running in docker swarm'''
+
+    swarmmode = False
+    try:
+        if os.environ['SERVICENAME']:
+            swarmmode = True
+    except KeyError:
+        logger.warning("SERVICENAME not set - if this is not a test then something is wrong!")
+    return swarmmode
+
+
 def get_ips_from_name(name: str) -> list[ipaddress.ip_address]:
     """Given a hostname return its IP addresses as a list"""
     local_ips_details = socket.getaddrinfo(f"{name}", 80)
@@ -261,14 +273,7 @@ async def main():
     ''' Main function
     Start PVAccessSniffer (in its own thread)
     and relay'''
-
-    # Check if we're in a Swarm
-    swarmmode = False
-    try:
-        if os.environ['SERVICENAME']:
-            swarmmode = True
-    except KeyError:
-        logger.warning("SERVICENAME not set - if this is not a test then something is wrong!")
+    swarmmode = is_swarmmode()
 
     local_addr = psutil.net_if_addrs()['eth0'][0].address
 
