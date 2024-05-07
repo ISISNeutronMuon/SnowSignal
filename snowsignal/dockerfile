@@ -1,6 +1,9 @@
 FROM python:3.11-slim
 
 RUN apt update && apt install -y libpcap0.8
-ADD snowsignal.py /src
+ADD requirements.txt /src/
+WORKDIR /src
+RUN pip install -r requirements.txt
+ADD snowsignal.py /src/
 
-CMD ["python", "backplane.py"]
+CMD ["python", "snowsignal.py"]
