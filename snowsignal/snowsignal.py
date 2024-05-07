@@ -131,7 +131,13 @@ class UDPBroadcastRelayServerProtocol:
         # Reconstitute the raw data back into a scapy packet. Note that we start
         # at the bottommost layer and the higher layers ought to be build
         # automatically
-        packet = scapy.layers.l2.Ether(data)
+        # TODO: URGENT! What happens if we receive data that can't be turned 
+        # into a scapy packet?
+        try:
+            packet = scapy.layers.l2.Ether(data)
+        except Exception as err:
+            logger.debug("Received anomalous data from %s which could not be ingested, triggerred exception %s", addr, err)
+            return
 
         # There's some difficult considerations with using the checksums
         # The UDP checksum is identical for identical search requests, so
