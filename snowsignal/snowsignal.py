@@ -215,6 +215,7 @@ class PVAccessSniffer:
 
         # AsyncSniffer runs in its own thread
         self.sniffer = AsyncSniffer(
+            iface=['eth0'],
             filter=f"udp port {self.local_port}",
             prn=self._send_to_relays,
             lfilter=self._is_broadcast,
