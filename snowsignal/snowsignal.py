@@ -291,17 +291,12 @@ async def main():
         pvasniffer = PVAccessSniffer(remote_relays=[local_addr])
     pvasniffer.start()
 
-    await run_relay_server((local_addr, 8888), 5076)
-
-    try:
-        while True:
-            # Every 10 seconds change if the configuration of the remote relays has changed
-            await asyncio.sleep(10)
-            logger.info('Checking if relays need updating')
-            if swarmmode:
-                pvasniffer.set_remote_relays(discover_relays())
-    finally:
-        pvasniffer.stop()
+    asyncio.create_task( run_relay_server((local_addr, 8888), 5076) )
+    
+    while True:
+        await asyncio.sleep(10)
+        if swarmmode:
+            pvasniffer.set_remote_relays(discover_relays())
 
 
 if __name__ == "__main__":
