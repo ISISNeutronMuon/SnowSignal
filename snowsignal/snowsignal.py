@@ -160,8 +160,15 @@ class UDPBroadcastRelayServerProtocol:
         # is different but more likely to collide
         recent_packets[packet[scapy.layers.inet.IP].chksum] = True
 
+        # Force a recalculation of the ethernet checksum
+        del packet.chksum 
+        del packet[scapy.layers.inet.UDP].chksum
+        # Note that very weirdly the next line is what actually does the 
+        # recalculation. It's not just for debugging info!
+        debugmsg = packet.show2(dump=True)
+        logger.debug("Broadcasting packet\n%s", debugmsg)
         # TODO: Check if we're sending these broadcasts twice?
-        scapy.sendrecv.sendp(packet)
+        scapy.sendrecv.sendp(packet, iface='eth0')
 
 
 async def run_relay_server(
