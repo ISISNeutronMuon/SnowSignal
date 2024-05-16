@@ -6,6 +6,7 @@ import logging
 import os
 import random
 import socket
+from typing import Callable
 
 import cachetools
 import configargparse
@@ -82,6 +83,44 @@ def get_localhost_ips() -> list[ipaddress.ip_address]:
     return local_ips
 
 
+class ResourceNotFoundException(OSError):
+    """ Indicate an expected hardware resource could not be found """
+    pass
+
+def get_localhost_macs() -> list[str]:
+    """ Get all the MAC addresses of local network interfaces """
+    macs = []
+
+    ifaces = psutil.net_if_addrs()
+    for iface in ifaces:
+        try:
+            macs.append(get_macaddress_from_iface(iface))
+        except ResourceNotFoundException:
+            pass
+    
+    return macs
+
+def get_from_iface(iface : str, family : socket.AddressFamily, attribute : str = 'address'):
+    """ Get the IP address associated with a network interface """
+    snicaddrs = psutil.net_if_addrs()[iface]
+    for snicaddr in snicaddrs:
+        if snicaddr.family == family:
+            return getattr(snicaddr, attribute)
+
+    raise ResourceNotFoundException(f'Could not identify the {family}, {attribute} associated with interface {iface}')
+
+def get_localipv4_from_iface(iface : str):
+    """ Get the IPv4 address associated with a network interface """
+    return get_from_iface(iface, socket.AddressFamily.AF_INET)
+
+def get_macaddress_from_iface(iface : str):
+    """ Get the MAC address associated with a network interface """
+    return get_from_iface(iface, socket.AddressFamily.AF_PACKET)
+
+def get_broadcast_from_iface(iface : str):
+    """ Get the MAC address associated with a network interface """
+    return get_from_iface(iface, socket.AddressFamily.AF_INET, attribute='broadcast')
+
 # Discover the other UDP Broadcast relays in the stack
 def discover_relays() -> list[ipaddress.ip_address]:
     """Discover the other UDP Broadcast Relays in the stack"""
@@ -155,10 +194,11 @@ class UDPBroadcastRelayServerProtocol:
             # TODO: URGENT! What happens if we receive data that can't be turned
             # into a scapy packet?
             try:
-                packet = scapy.layers.l2.Ether(data)
+                packet = scapy.layers.l2.Ether(data, src=get_macaddress_from_iface('eth0'))
             except Exception as err:
                 logger.debug("Received anomalous data from %s which could not be ingested, triggerred exception %s", addr, err)
                 return
+            packet[scapy.layers.l2.Ether].src = get_macaddress_from_iface('eth0')
 
             # There's some difficult considerations with using the checksums
             # The UDP checksum is identical for identical search requests, so
@@ -183,9 +223,17 @@ class UDPBroadcastRelayServerProtocol:
             payload = data[6:]
 
             packet =  scapy.layers.l2.Ether(dst="ff:ff:ff:ff:ff:ff") \
-                     / scapy.layers.inet.IP(dst="255.255.255.255", id=pkt_id, flags=pkt_flags) \
+                     /scapy.layers.inet.IP(dst=get_broadcast_from_iface('eth0'), id=pkt_id, flags=pkt_flags) \
                      /scapy.layers.inet.UDP(sport=udp_sport, dport=udp_dport) \
                      /scapy.packet.Raw(load=payload)
+
+            # For some reason in swarm testing src isn't being set
+            if packet[scapy.layers.l2.Ether].src == '00:00:00:00:00:00':
+                packet[scapy.layers.l2.Ether].src = get_macaddress_from_iface('eth0')
+
+            if packet[scapy.layers.inet.IP].src == '0.0.0.0':
+                packet[scapy.layers.inet.IP].src = get_localipv4_from_iface('eth0')
+
         else:
             logger.error('Unknown rebroadcast mode %s', self.rebroadcast_mode)
             raise SyntaxError(f'Unknown rebroadcast mode {self.rebroadcast_mode}')
@@ -193,8 +241,6 @@ class UDPBroadcastRelayServerProtocol:
         # Note that very weirdly the next line is what actually does the
         # UDP checksum recalculation. It's not just for debugging info!
         # Perhaps only needed in the packet mode above?
-        debugmsg = packet.show(dump=True)
-        logger.debug("Broadcasting packet\n%s", debugmsg)
         debugmsg = packet.show2(dump=True)
         logger.debug("Broadcasting packet\n%s", debugmsg)
 
@@ -261,24 +307,13 @@ class PVAccessSniffer:
             #       syntax, the same as used by tcpdump
             #       See https://biot.com/capstats/bpf.html
             if config.rebroadcast_mode == 'packet':
-                scapy_filter = f"udp port {self.local_port}"
-                prn = self._send_to_relays_packet
-                lfilter = self._is_broadcast
+                (scapy_filter, prn, lfilter) = self.__setup_rebroadcast_packet()
             elif config.rebroadcast_mode == 'payload':
-                # We don't want to listen to our own UDP broadcasts
-                local_ips = get_localhost_ips()
-                local_ips_strings = [str(x) for x in local_ips]
-                filter_string = ' or '.join(local_ips_strings)
-
-                scapy_filter = f"udp port {self.local_port} and not (src {filter_string})"
-                prn = self._send_to_relays_payload
-                lfilter = None # self._is_broadcast
+                (scapy_filter, prn, lfilter) = self.__setup_rebroadcast_payload()
         else:
             mode = 'packet'
             iface = 'eth0'
-            scapy_filter = f"udp port {self.local_port}"
-            prn = self._send_to_relays_packet
-            lfilter = self._is_broadcast
+            (scapy_filter, prn, lfilter) = self.__setup_rebroadcast_packet()
 
         logger.debug("Setting up scapy sniffer in %s mode with filter '%s'",
                      mode, scapy_filter)
@@ -297,6 +332,31 @@ class PVAccessSniffer:
             store   = False,
             quiet   = True,
         )
+
+    def __setup_rebroadcast_packet(self) -> tuple[str, Callable[[scapy.packet.Packet], None], str]:
+        """ Settings to use UDP rebroadcast of whole packet """
+        local_macs = get_localhost_macs()
+        filter_string = ' or '.join(local_macs)
+
+        scapy_filter = f"udp port {self.local_port} and not (ether src {filter_string})"
+        prn = self._send_to_relays_packet
+        lfilter = self._is_broadcast
+
+        return (scapy_filter, prn, lfilter)
+
+    def __setup_rebroadcast_payload(self) -> tuple[str, Callable[[scapy.packet.Packet], None], str]:
+        """ Settings to use UDP rebroadcast of just the payload """
+        # We don't want to listen to our own UDP broadcasts
+        local_ips = get_localhost_ips()
+        local_ips_strings = [str(x) for x in local_ips]
+        filter_string = ' or '.join(local_ips_strings)
+
+        scapy_filter = f"udp port {self.local_port} and not (src {filter_string})"
+        prn = self._send_to_relays_payload
+        lfilter = None # self._is_broadcast
+
+        return (scapy_filter, prn, lfilter)
+
 
     def _send_to_relays_payload(self, packet: scapy.packet.Packet):
         """
@@ -327,27 +387,39 @@ class PVAccessSniffer:
         if packet passes sniffer filters
         """
 
-        # Check the packet source. If broadcast a packet with this source in the last
-        # second then we shouldn't do so again
-        pkt_raw = scapy.compat.raw(packet)
-        packet_hash = packet[scapy.layers.inet.IP].chksum
-        if not packet_hash in recent_packets:
-            logger.debug("Received UDP broadcast message:\n%s", packet.show(dump=True))
-            logger.debug("scapy packet summary: %s", packet.summary())
+        logger.debug("Received UDP broadcast message:\n%s", packet.show(dump=True))
+        logger.debug("scapy packet summary: %s", packet.summary())
 
-            for remote_relay in self.remote_relays:
-                logger.debug(
-                    "Send to (%s, %i) message: %r",
-                    remote_relay, self.remote_port, pkt_raw,
-                )
-                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                s.sendto(pkt_raw, (str(remote_relay), self.remote_port))
-        else:
+        pkt_raw = scapy.compat.raw(packet)
+        for remote_relay in self.remote_relays:
             logger.debug(
-                "Received message with banned hash %s from address %s; "
-                "banned to prevent loops / packet storms",
-                packet_hash, packet[scapy.layers.inet.IP].src,
+                "Send to (%s, %i) message: %r",
+                remote_relay, self.remote_port, pkt_raw,
             )
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.sendto(pkt_raw, (str(remote_relay), self.remote_port))
+
+        # # Check the packet source. If broadcast a packet with this source in the last
+        # # second then we shouldn't do so again
+        # pkt_raw = scapy.compat.raw(packet)
+        # packet_hash = packet[scapy.layers.inet.IP].chksum
+        # if not packet_hash in recent_packets:
+        #     logger.debug("Received UDP broadcast message:\n%s", packet.show(dump=True))
+        #     logger.debug("scapy packet summary: %s", packet.summary())
+
+        #     for remote_relay in self.remote_relays:
+        #         logger.debug(
+        #             "Send to (%s, %i) message: %r",
+        #             remote_relay, self.remote_port, pkt_raw,
+        #         )
+        #         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        #         s.sendto(pkt_raw, (str(remote_relay), self.remote_port))
+        # else:
+        #     logger.debug(
+        #         "Received message with banned hash %s from address %s; "
+        #         "banned to prevent loops / packet storms",
+        #         packet_hash, packet[scapy.layers.inet.IP].src,
+        #     )
 
     def _is_broadcast(self, packet: scapy.packet.Packet):
         """Check if this is a broadcast packet"""
@@ -387,7 +459,7 @@ def configure():
           help='Port on which to receive and transmit UDP broadcasts')
     p.add('-m', '--mesh-port', default=7124, type=int,
           help='Port on which this instance will communicate with others via UDP unicast')
-    p.add('--rebroadcast-mode', choices=['packet', 'payload'], default='payload',
+    p.add('--rebroadcast-mode', choices=['packet', 'payload'], default='packet',
           help='Transfer the whole packet or just the payload on the mesh network')
 
     config = p.parse_args()
@@ -403,7 +475,7 @@ async def main():
     config = configure()
 
     #eth0 = psutil.net_if_addrs()['eth0']
-    local_addr = psutil.net_if_addrs()[config.target_interface][0].address
+    local_addr = get_localipv4_from_iface(config.target_interface)
 
     if swarmmode:
         remote_relays = discover_relays()
