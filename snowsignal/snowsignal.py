@@ -290,7 +290,7 @@ class PVAccessSniffer:
         remote_port=7124,
         config = None
     ):
-        logger.info("Initialising PVASniffer listening for UDP broadcasts "
+        logger.info("Initialising PVASniffer to listen for UDP broadcasts "
                     "on port %i for relay to remote relays %s on port %i",
                     local_port, remote_relays, remote_port)
         self.local_port = local_port
@@ -432,7 +432,7 @@ class PVAccessSniffer:
 
     def start(self):
         """Start sniffer"""
-        logger.info("Starting to sniff for UDP broadcasts on port %i", self.local_port)
+        logger.debug("Starting PVASniffer", self.local_port)
         self.sniffer.start()
 
     def stop(self):
@@ -459,10 +459,31 @@ def configure():
           help='Port on which to receive and transmit UDP broadcasts')
     p.add('-m', '--mesh-port', default=7124, type=int,
           help='Port on which this instance will communicate with others via UDP unicast')
-    p.add('--rebroadcast-mode', choices=['packet', 'payload'], default='packet',
+    p.add('-rbm', '--rebroadcast-mode', choices=['packet', 'payload'], default='packet',
           help='Transfer the whole packet or just the payload on the mesh network')
+    p.add('--other-relays', nargs='+', type=str, default=[],
+          help='Manually select other relays to transmit received UDP broadcasts to')
+    p.add('-l', '--log-level', choices=['debug', 'info', 'warning', 'error', 'critical'],
+          default='warning',
+          help='Logging level')
 
     config = p.parse_args()
+
+    match config.log_level:
+        case 'critical':
+            loglevel = logging.CRITICAL
+        case 'error':
+            loglevel = logging.ERROR
+        case 'warning':
+            loglevel = logging.WARNING
+        case 'info':
+            loglevel = logging.INFO
+        case 'debug':
+            loglevel = logging.DEBUG
+
+    logger.setLevel(loglevel)
+    scapy.config.conf.logLevel = logging.DEBUG
+    #scapy.config.conf(logLevel=loglevel)
 
     return config
 
@@ -470,17 +491,26 @@ async def main():
     ''' Main function
     Start PVAccessSniffer (in its own thread)
     and relay'''
-    swarmmode = is_swarmmode()
 
     config = configure()
+    logger.info('Starting with configuration %s', config)
 
-    #eth0 = psutil.net_if_addrs()['eth0']
     local_addr = get_localipv4_from_iface(config.target_interface)
 
-    if swarmmode:
+    # Check if we're running in a Docker Swarm
+    swarmmode = is_swarmmode()
+    if swarmmode and not config.other_relays:
+        # Use swarm DNS magic to identify the other nodes
+        logger.debug('Using swarm DNS to identify other relays')
         remote_relays = discover_relays()
+    elif not swarmmode and config.other_relays:
+        logger.debug('Using user configuration of other relays')
+        remote_relays = config.other_relays
     else:
+        # Assume we're in testing mode and loopback to ourselves
+        logger.debug('Using debug mode for other relays, will relay to self')
         remote_relays = [local_addr]
+
     pvasniffer = PVAccessSniffer(local_port=config.broadcast_port,
                                  remote_relays=remote_relays,
                                  remote_port=config.mesh_port,
@@ -496,7 +526,7 @@ async def main():
 
     while True:
         await asyncio.sleep(10)
-        if swarmmode:
+        if is_swarmmode():
             pvasniffer.set_remote_relays(discover_relays())
 
 
