@@ -1,9 +1,9 @@
 FROM python:3.11-slim
 
 RUN apt update && apt install -y libpcap0.8
-ADD requirements.txt /src/
-WORKDIR /src
+ADD requirements.txt /snowsignal/
+WORKDIR /snowsignal
 RUN pip install -r requirements.txt
-ADD snowsignal.py /src/
+ADD *.py /snowsignal/
 
 CMD ["python", "snowsignal.py"]
