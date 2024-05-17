@@ -1,8 +1,7 @@
 # SnowSignal
 SnowSignal is designed to create a mesh network between instances of the program that will listen for UDP broadcasts received on one node of the network and rebroadcast on all other nodes.
 
-## The Problem
-
+[[_TOC_]]
 
 ## Usage
 ### General
@@ -38,7 +37,34 @@ There is an additional requirement that the environment variable SERVICENAME be 
 
 This allows each node in the service to automatically located and connect to the other nodes. The mesh will automatically heal as members enter and leave.
 
-## Observations and Lessons Learned
+## The Problem
+The EPICS PVAccess protocol uses a mixture of UDP broadcast, UDP unicast and TCP (in roughly that order) to establish communication between a client and a server. In this case a client is making a query for a PV and its value (or some other field), e.g. a pvget while the server holds the requested PV.
+
+The image below gives an example of the communication between a client and server and is taken from the [PVAccess Protocol Specification](https://epics-controls.org/wp-content/uploads/2018/10/pvAccess-Protocol-Specification.pdf). 
+
+![PVAccess protocol specification communication example](docs/pvacess_communication_example.png)
+
+The relevant part for this problem is the UDP broadcast / multicast. (Although the specification requires multicast support at this time I have only ever seen broadcast used.) When a pvget (or equivalent) is performed the first step is a UDP broadcast search request, i.e. a cry to local machines asking if they have the requested PV. If any do they will reply back to the requesting process with a UDP unicast and establish a TCP connection to exchange information.
+
+UDP broadcasts are restricted to the network segment of the network interface conducting the broadcast. This means that search requests will not reach machines not on the same network segment. Alternative means suchs as a PVA Gateway or `EPICS_PVA_NAME_SERVERS` must be used in such circumstances. Note that 
+-  PVA Gateway allows communication between isolated network segments but al communications must pass through the Gateway, i.e. a many to one to many topology is implicitly created.
+- `EPICS_PVA_NAME_SERVERS` requires only that TCP communication between server and client be possible, but requires servers to be specified in advance.
+
+However, if unicast communication between two network segments is possible then we could simply relay the UDP broadcasts between the two networks, allowing UDP unicast and TCP communication to proceed as usual.
+
+This is the purpose of SnowSignal. It relays UDP broadcasts received on a specified port to other instances of SnowSignal (i.e. forming a mesh network) that then rebroadcast those UDP broadcasts on their own network segments.
+
+**Note**: PVAccess server UDP beacon messages also use UDP broadcast and will be relayed by SnowSignal. Their purpose and consequences is not explored further here.
+
+### Docker Swarm and Docker Networks
+A docker swarm network may be created which crosses transparently between the nodes in the swarm. However, at the time of writing docker swarm networks do not support UDP multicast or broadcast. 
+
+For PVAccess this means that search requests are isolated to individual nodes in the swarm. A pvget to a server-container on the same node will succeed, while one to a server-container on another node will fail. (Assuming that PVA Gateway or `EPICS_PVA_NAME_SERVERS` is not used to overcome this limitation.)
+
+## Implementation
+SnowSignal is implemented in Python and primarily uses the [scapy](https://scapy.readthedocs.io/en/latest/) library to send, receive, and manipulate UDP packets. 
+
+### Observations and Lessons Learned
 A number of issues arose as I was developing this utility: 
 - I originally attempted to be clever around preventing a UDP broadcast storm by using a hashes of the UDP packets broadcast by a node member and then rejecting broadcast messages that were subsequently received by the same node. (More specifically a time-to-live dictionary so that packets weren't banned forever.) This proved overly complex and the current implementation simply filters out UDP broadcasts with sources with the same MAC address as the individual nodes.
 - A PVAccess search request includes the IP address and ephemeral port that the unicast UDP reply should use. Experience shows that implementations ignore this in favour of the packet UDP source IP and port. This is why it's ultimately simpler to copy the whole packet and alter it rather than send the payload and construct a new packet around it.
