@@ -21,7 +21,7 @@ scapy.config.conf.use_npcap = False
 scapy.config.conf.verb = 0
 scapy.config.conf.logLevel = logger.getEffectiveLevel()
 
-class UDPRelayReceiveProtocol:
+class UDPRelayReceiveProtocol(asyncio.DatagramProtocol):
     """Listen to UDP messages from remote relays and forward them as broadcasts on the local net"""
 
     def __init__(self, broadcast_port: int, config = None):
@@ -64,7 +64,8 @@ class UDPRelayReceiveProtocol:
             # automatically. In testing in Docker Swarm some weird anomalies were
             # discovered but these are mitigated by packet.show2() further down.
             # The exception is that on Swarm the src was not created until that point.
-            # But since we need to 
+            # But since we need to set the src we include it in the packet build here
+            # even though it doesn't seem to be correctly set
             # TODO: What happens if we receive data that can't be turned
             # into a scapy packet?
             try:

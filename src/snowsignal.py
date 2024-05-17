@@ -100,7 +100,7 @@ def configure():
         # Can't use the same port for two different purposes
         # Later, if we allow the receive relay and transmit relay on different
         # ports we may need to revisit this error
-        logger.error('Broadcast port (%i) and mesh port (%i) may not be the same', 
+        logger.error('Broadcast port (%i) and mesh port (%i) may not be the same',
                      config.broadcast_port, config.mesh_port)
         raise ValueError(f'Broadcast port ({config.broadcast_port}) and mesh port ({config.mesh_port}) may not be the same')
 
