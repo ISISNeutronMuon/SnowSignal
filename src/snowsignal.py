@@ -89,7 +89,7 @@ def configure():
         case 'debug':
             loglevel = logging.DEBUG
 
-    if loglevel < logging.WARNING:
+    if loglevel < logging.INFO:
         logging.basicConfig(format = '%(asctime)s - %(name)s - %(levelname)s: %(message)s',
                             encoding="utf-8", level=loglevel)
     else:
