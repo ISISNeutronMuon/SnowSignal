@@ -64,6 +64,23 @@ For PVAccess this means that search requests are isolated to individual nodes in
 ## Implementation
 SnowSignal is implemented in Python and primarily uses the [scapy](https://scapy.readthedocs.io/en/latest/) library to send, receive, and manipulate UDP packets. 
 
+The SnowSignal code is in two main parts:
+
+### 1. udp_relay_transmit
+A [scapy AsyncSniffer](https://scapy.readthedocs.io/en/latest/usage.html#asynchronous-sniffing) is used to monitor for UDP broadcasts on the specified UDP port and local interface. A scapy filter is used to ignore broadcasts either originating from local interfaces' MAC addresses or from the local IP addresses. This prevents us from reacting to our own UDP broadcasts.
+
+If a UDP broadcast packet passes the required filters either the whole scapy Packet or the UDP packet's payload is sent to the other SnowSignal instances in the mesh network. They will subsequently rebroadcast it.
+
+### 2. udp_relay_receive
+A UDPTransmitRelay class listens for UDP unicast messages received on a specified port and broadcasts those messages on a specified local interfaces. The class is an implementation of the asynchio [DatagramProtocol](https://docs.python.org/3/library/asyncio-protocol.html#datagram-protocols) run by using [loop.create_datagram_endpoint()](https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.loop.create_datagram_endpoint). 
+
+When a UDP message is received from another SnowSignal node the payload is used via scapy to construct a UDP broadcast packet. In practice this is done using a whole scapy Packet sent as bytes, which is then altered to use the Ethernet source MAC address of the interface that will be used to send it. This means that it can be filtered out by the `udp_relay_transmit` and we do not create packet storms. 
+
+### Mesh Network
+The SnowSignal mesh network may be manually specified. 
+
+However, in a Docker Swarm environment we can identify the other services by using the DNS entries for `{{.Service.Name}}.tasks`. We then need only remove this nodes IP address from that list to get the other nodes in the mesh. We update the list of mesh nodes from this source every 10 seconds which allows us to accomodate container restarts or migrations and even, in theory, nodes entering and leaving the swarm.
+
 ### Observations and Lessons Learned
 A number of issues arose as I was developing this utility: 
 - I originally attempted to be clever around preventing a UDP broadcast storm by using a hashes of the UDP packets broadcast by a node member and then rejecting broadcast messages that were subsequently received by the same node. (More specifically a time-to-live dictionary so that packets weren't banned forever.) This proved overly complex and the current implementation simply filters out UDP broadcasts with sources with the same MAC address as the individual nodes.
