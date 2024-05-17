@@ -5,7 +5,7 @@ services:
             context: ./src
         command: "sleep infinity"
         volumes:
-            - .:/src/
+            - ./src:/snowsignal/
         networks:
             - udptest
 
