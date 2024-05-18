@@ -3,8 +3,11 @@
 import ipaddress
 import logging
 import socket
+import sys
 
 import psutil
+
+from typing import Union
 
 logger = logging.getLogger(__name__)
 
@@ -43,24 +46,10 @@ def get_localhost_ips() -> list[ipaddress.ip_address]:
 
     return local_ips
 
-
 class ResourceNotFoundException(OSError):
     """ Indicate an expected hardware resource could not be found """
 
-def get_localhost_macs() -> list[str]:
-    """ Get all the MAC addresses of local network interfaces """
-    macs = []
-
-    ifaces = psutil.net_if_addrs()
-    for iface in ifaces:
-        try:
-            macs.append(get_macaddress_from_iface(iface))
-        except ResourceNotFoundException:
-            pass
-
-    return macs
-
-def get_from_iface(iface : str, family : socket.AddressFamily, attribute : str = 'address'):
+def get_from_iface(iface : str, family : Union[socket.AddressFamily, psutil.AF_LINK], attribute : str = 'address'):
     """ Get the IP address associated with a network interface """
     snicaddrs = psutil.net_if_addrs()[iface]
     for snicaddr in snicaddrs:
@@ -76,8 +65,30 @@ def get_localipv4_from_iface(iface : str):
 
 def get_macaddress_from_iface(iface : str):
     """ Get the MAC address associated with a network interface """
-    return get_from_iface(iface, socket.AddressFamily.AF_PACKET)
+    if sys.platform != 'win32':
+        return get_from_iface(iface, socket.AddressFamily.AF_PACKET)
+    else:
+        return get_from_iface(iface, psutil.AF_LINK)
+
+def get_localhost_macs() -> list[str]:
+    """ Get all the MAC addresses of local network interfaces """
+    macs = []
+
+    ifaces = psutil.net_if_addrs()
+    for iface in ifaces:
+        try:
+            macs.append(get_macaddress_from_iface(iface))
+        except ResourceNotFoundException:
+            pass
+
+    return macs
 
 def get_broadcast_from_iface(iface : str):
     """ Get the MAC address associated with a network interface """
-    return get_from_iface(iface, socket.AddressFamily.AF_INET, attribute='broadcast')
+    broadcast_address = get_from_iface(iface, socket.AddressFamily.AF_INET, attribute='broadcast')
+
+    # If we don't get a valid broadcast address then attempt to substitute one
+    if not broadcast_address:
+        return '255.255.255.255'
+
+    return broadcast_address
