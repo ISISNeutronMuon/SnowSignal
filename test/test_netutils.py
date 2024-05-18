@@ -22,7 +22,7 @@ class TestNetUtilsFunctions(unittest.TestCase):
         ips = netutils.get_localhost_ips()
 
         self.assertIsInstance(ips, list)
-        self.assertTrue(len(ips))
+        self.assertTrue(len(ips), "Expected one or more local IP addresses")
         for ip in ips:
             self.assertIsInstance(ip, (ipaddress.IPv4Address, ipaddress.IPv6Address))
 
@@ -30,9 +30,10 @@ class TestNetUtilsFunctions(unittest.TestCase):
         macs = netutils.get_localhost_macs()
 
         self.assertIsInstance(macs, list)
-        self.assertTrue(len(macs))
+        self.assertTrue(len(macs), "Expected one or more network interface MAC addresses")
         for mac in macs:
-            self.assertRegex(mac, '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$')
+            self.assertRegex(mac, '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$', 
+                             "Expected string to match simple MAC address regex")
 
     def test_get_broadcast_from_iface(self):
         # Loop through the interfaces till we find one with a broadcast address
