@@ -4,6 +4,7 @@ import asyncio
 import ipaddress
 import logging
 import random
+import struct
 
 import scapy.compat
 import scapy.config
@@ -11,7 +12,7 @@ import scapy.layers
 import scapy.layers.inet
 import scapy.packet
 import scapy.sendrecv
-from netutils import get_macaddress_from_iface, get_localipv4_from_iface, get_broadcast_from_iface
+from .netutils import get_macaddress_from_iface, get_localipv4_from_iface, get_broadcast_from_iface
 
 # Logging and configuration of Scapy
 logger = logging.getLogger(__name__)
@@ -70,10 +71,11 @@ class UDPRelayReceiveProtocol(asyncio.DatagramProtocol):
             # into a scapy packet?
             try:
                 packet = scapy.layers.l2.Ether(data, src=self.mac)
-            except Exception as err:
-                logger.debug("Received anomalous data from %s which could not be ingested, triggerred exception %s", addr, err)
+            except struct.error as err:
+                logger.debug("Received anomalous data from %s which could not be ingested, "
+                             "triggerred exception %s", addr, err)
                 return
-            
+
             # Change the packet ethernet source to be the mac address of this
             # network interface. In this way we can ignore these broadcasts 
             # using the rules in the PVAccessSniffer and prevent UDP storms
@@ -92,6 +94,7 @@ class UDPRelayReceiveProtocol(asyncio.DatagramProtocol):
             # Decode the received payload
             if data[0:2] != b'SS':
                 logger.debug("Malformed packet received")
+                return
 
             # IPv4 packet structure: https://en.wikipedia.org/wiki/IPv4#Packet_structure
             # UDP datagram structure: https://en.wikipedia.org/wiki/User_Datagram_Protocol#UDP_datagram_structure
