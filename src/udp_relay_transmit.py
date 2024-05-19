@@ -14,7 +14,7 @@ import scapy.sendrecv
 
 from scapy.all import AsyncSniffer
 
-from netutils import get_localhost_macs, get_localhost_ips
+from .netutils import get_localhost_macs, get_localhost_ips
 
 
 logger = logging.getLogger(__name__)
@@ -161,7 +161,8 @@ class UDPRelayTransmit:
         #         packet_hash, packet[scapy.layers.inet.IP].src,
         #     )
 
-    def _is_broadcast(self, packet: scapy.packet.Packet):
+    @classmethod
+    def _is_broadcast(cls, packet: scapy.packet.Packet):
         """Check if this is a broadcast packet"""
 
         return (
