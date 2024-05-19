@@ -1,0 +1,31 @@
+stages:
+  - test
+  - build
+
+Run unittests:
+    stage: test
+    image: python:latest
+    script:
+      - python --version
+      - pip install coverage
+      - pip install -r src/requirements.txt
+      - python -m coverage run --source=. -m unittest
+      - coverage report
+      - coverage xml
+    artifacts:
+      when: always
+      reports:
+        junit: report.xml
+
+Rebuild Image: 
+    stage: build
+    when: on_success
+    image: docker
+    variables:
+      DOCKER_TAG: $CI_COMMIT_REF_NAME
+    
+    services:
+      - docker:dind
+    script:
+      - echo $NAME
+      - docker build -t snowsignal src
