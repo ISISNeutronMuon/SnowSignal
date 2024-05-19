@@ -17,9 +17,8 @@ class TestUDPRelayReceiveMethods(unittest.TestCase):
     # the line should be
     #     return b"".join(chb(int(x, 16)) for x in re.split(':|-', plain_str(mac)))
 
-    @classmethod
-    def setUpClass(cls):
-        cls._test_payload = b'testdata'
+    def setUp(self):
+        self._test_payload = b'testdata'
 
     def _create_receiver(self, rebroadcast_mode) -> udp_relay_receive.UDPRelayReceiveProtocol:
         class Config:
