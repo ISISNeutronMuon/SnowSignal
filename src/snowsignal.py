@@ -102,7 +102,8 @@ def configure():
         # ports we may need to revisit this error
         logger.error('Broadcast port (%i) and mesh port (%i) may not be the same',
                      config.broadcast_port, config.mesh_port)
-        raise ValueError(f'Broadcast port ({config.broadcast_port}) and mesh port ({config.mesh_port}) may not be the same')
+        raise ValueError(f'Broadcast port ({config.broadcast_port}) and '
+                         f'mesh port ({config.mesh_port}) may not be the same')
 
     return config
 

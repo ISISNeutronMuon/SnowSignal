@@ -77,7 +77,7 @@ class UDPRelayReceiveProtocol(asyncio.DatagramProtocol):
                 return
 
             # Change the packet ethernet source to be the mac address of this
-            # network interface. In this way we can ignore these broadcasts 
+            # network interface. In this way we can ignore these broadcasts
             # using the rules in the PVAccessSniffer and prevent UDP storms
             packet[scapy.layers.l2.Ether].src = self.mac
 
