@@ -1,6 +1,10 @@
 # SnowSignal
 SnowSignal is designed to create a mesh network between instances of the program that will listen for UDP broadcasts received on one node of the network and rebroadcast on all other nodes.
 
+
+[![pipeline status](https://gitlab.stfc.ac.uk/isis-accelerator-controls/playground/ivan/infrastructure/snowsignal/badges/main/pipeline.svg)](https://gitlab.stfc.ac.uk/isis-accelerator-controls/playground/ivan/infrastructure/snowsignal/-/commits/main) 
+[![coverage report](https://gitlab.stfc.ac.uk/isis-accelerator-controls/playground/ivan/infrastructure/snowsignal/badges/main/coverage.svg)](https://gitlab.stfc.ac.uk/isis-accelerator-controls/playground/ivan/infrastructure/snowsignal/-/commits/main)
+
 [[_TOC_]]
 
 ## Usage
