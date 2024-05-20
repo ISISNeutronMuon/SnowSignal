@@ -6,9 +6,9 @@ import logging
 import os
 
 import configargparse
-from netutils import get_localhost_ips, get_ips_from_name, get_localipv4_from_iface
-from udp_relay_receive import run_relay_receiver
-from udp_relay_transmit import UDPRelayTransmit
+from .netutils import get_localhost_ips, get_ips_from_name, get_localipv4_from_iface
+from .udp_relay_receive import run_relay_receiver
+from .udp_relay_transmit import UDPRelayTransmit
 
 # Logging and configuration of Scapy
 logger = logging.getLogger()
@@ -57,7 +57,7 @@ def discover_relays() -> list[ipaddress.ip_address]:
     return valid_ips
 
 
-def configure():
+def configure(arg_list: list[str] | None = None):
     """ Setup configuration for the SnowSignal service """
 
     p = configargparse.ArgParser()
@@ -75,7 +75,7 @@ def configure():
           default='info',
           help='Logging level')
 
-    config = p.parse_args()
+    config = p.parse_args(arg_list)
 
     match config.log_level:
         case 'critical':
@@ -107,13 +107,14 @@ def configure():
 
     return config
 
-async def main():
+# Weird "arg_list" syntax required to support unittests
+async def main(arg_list: list[str] | None = None, loop_forever : bool = True):
     ''' Main function
     Start PVAccessSniffer (in its own thread)
     and relay'''
 
     # Configure 
-    config = configure()
+    config = configure(arg_list)
     logger.info('Starting with configuration %s', config)
 
     local_addr = get_localipv4_from_iface(config.target_interface)
@@ -145,7 +146,7 @@ async def main():
                                            )
                         )
 
-    while True:
+    while loop_forever:
         await asyncio.sleep(10)
         if swarmmode:
             # Check to see if remote relays have changed 
