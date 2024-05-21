@@ -26,6 +26,8 @@ class UDPRelayReceiveProtocol(asyncio.DatagramProtocol):
     """Listen to UDP messages from remote relays and forward them as broadcasts on the local net"""
 
     def __init__(self, broadcast_port: int, config = None) -> None:
+        super().__init__()
+        
         self.broadcast_port = broadcast_port
         self.transport = None  # Hasn't been initialised yet
 
