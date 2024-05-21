@@ -27,7 +27,7 @@ class UDPRelayReceiveProtocol(asyncio.DatagramProtocol):
 
     def __init__(self, broadcast_port: int, config = None) -> None:
         super().__init__()
-        
+
         self.broadcast_port = broadcast_port
         self.transport = None  # Hasn't been initialised yet
 
@@ -50,7 +50,7 @@ class UDPRelayReceiveProtocol(asyncio.DatagramProtocol):
         # What does connection lost even mean for UDP?
         # Seems only necessary to stop some spurious errors on server shutdown
 
-    def datagram_received(self, data: bytes, addr : tuple[str | any, int]) -> None:
+    def datagram_received(self, data: bytes, addr : tuple[any, int]) -> None:
         """Receive a UDP message and forward it to the remote relays"""
         logger.debug(
             "Received from %s for rebroadcast on port %i message: %r",
