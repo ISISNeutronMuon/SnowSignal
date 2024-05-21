@@ -25,7 +25,7 @@ scapy.config.conf.logLevel = logger.getEffectiveLevel()
 class UDPRelayReceiveProtocol(asyncio.DatagramProtocol):
     """Listen to UDP messages from remote relays and forward them as broadcasts on the local net"""
 
-    def __init__(self, broadcast_port: int, config = None):
+    def __init__(self, broadcast_port: int, config = None) -> None:
         self.broadcast_port = broadcast_port
         self.transport = None  # Hasn't been initialised yet
 
@@ -39,16 +39,16 @@ class UDPRelayReceiveProtocol(asyncio.DatagramProtocol):
         # Assume the MAC address is immutable
         self.mac = get_macaddress_from_iface(self.iface)
 
-    def connection_made(self, transport: asyncio.DatagramTransport):
+    def connection_made(self, transport: asyncio.DatagramTransport) -> None:
         """Handle a connection being established"""
         self.transport = transport
 
-    def connection_lost(self, exc):
+    def connection_lost(self, exc : Exception | None) -> None:
         """Handle a connection being lost"""
         # What does connection lost even mean for UDP?
         # Seems only necessary to stop some spurious errors on server shutdown
 
-    def datagram_received(self, data: bytes, addr):
+    def datagram_received(self, data: bytes, addr : tuple[str | any, int]) -> None:
         """Receive a UDP message and forward it to the remote relays"""
         logger.debug(
             "Received from %s for rebroadcast on port %i message: %r",
@@ -140,7 +140,7 @@ async def run_relay_receiver(
     local_addr: tuple[ipaddress.ip_address, int],
     broadcast_port: int,
     config = None
-):
+) -> None:
     """Start the UDP server that listens for messages from other relays and broadcasts them"""
 
     logger.info(
