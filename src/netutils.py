@@ -92,3 +92,14 @@ def get_broadcast_from_iface(iface : str):
         return '255.255.255.255'
 
     return broadcast_address
+
+
+def human_readable_mac(macbytes : bytes, separator : str = ':') -> str:
+    """ Convert MAC in bytes into human-readable string with separators """
+    unseparated_mac_str = macbytes.hex()
+    return separator.join([i+j for i,j in zip(unseparated_mac_str[::2], unseparated_mac_str[1::2])])
+
+def machine_readable_mac(macstr : str) -> bytes:
+    """ Convert MAC with ':' or '-' separators into bytes without seperators """
+    hexstring = macstr.translate({45 : '', 58:''})
+    return bytes.fromhex(hexstring)
