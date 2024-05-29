@@ -133,12 +133,12 @@ async def main(arg_list: list[str] | None = None, loop_forever : bool = True):
         logger.debug('Using debug mode for other relays, will relay to self')
         remote_relays = [local_addr]
 
-    pvasniffer = UDPRelayTransmit(local_port=config.broadcast_port,
+    udp_sniff = UDPRelayTransmit(local_port=config.broadcast_port,
                                   remote_relays=remote_relays,
                                   remote_port=config.mesh_port,
                                   config=config
                                  )
-    pvasniffer.start()
+    asyncio.create_task( udp_sniff.start() )
 
     asyncio.create_task( run_relay_receiver( (local_addr, config.mesh_port),
                                              config.broadcast_port,

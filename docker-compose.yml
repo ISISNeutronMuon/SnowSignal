@@ -5,15 +5,17 @@ services:
             context: ./src
         command: "sleep infinity"
         volumes:
-            - ./src:/snowsignal/
+            - ./:/snowsignal/
         networks:
             - udptest
 
     client:
-        image: python:3.11-slim
+        image: snowsignal
+        build:
+            context: ./src
         command: "sleep infinity"
         volumes:
-            - .:/src/
+            - ./:/snowsignal/
         networks:
             - udptest
 
