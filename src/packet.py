@@ -60,6 +60,7 @@ class Packet():
 
     def decode_ethernet(self):
         """ Interpret input bytes as a Ethernet packet """
+        # https://en.wikipedia.org/wiki/Ethernet_frame#Structure
 
         logger.debug('Decoding ethernet packet %r', self.raw)
 

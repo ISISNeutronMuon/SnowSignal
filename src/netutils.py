@@ -5,9 +5,9 @@ import logging
 import socket
 import sys
 
-import psutil
-
 from typing import Union
+
+import psutil
 
 logger = logging.getLogger(__name__)
 
