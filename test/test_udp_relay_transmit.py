@@ -104,3 +104,16 @@ class TestUDPRelayTransmitMethods(unittest.IsolatedAsyncioTestCase):
         remote_relays.append(ipaddress.IPv4Address('9.9.9.9'))
         transmitter.set_remote_relays(remote_relays)
         self.assertEqual(transmitter.remote_relays, remote_relays)
+
+    # #@patch('socket.socket')
+    # async def test_start(self)#, socket_mock : unittest.mock.AsyncMock):
+    #     transmitter = udp_relay_transmit.UDPRelayTransmit()
+
+    #     test_packet = (self._create_broadcast_test_packet(), ('127.0.0.1', 5076))
+    #     with (
+    #         patch('asyncio.SelectorEventLoop.sock_recvfrom', return_value=test_packet),
+    #         patch('src.udp_relay_transmit.UDPRelayTransmit._send_to_relays_bytes', return_value=False) as rebroad_mock
+    #     ):
+    #         await transmitter.start()
+
+    #     rebroad_mock.assert_called_once()

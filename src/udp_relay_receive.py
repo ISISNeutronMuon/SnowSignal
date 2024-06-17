@@ -89,7 +89,7 @@ class UDPRelayReceiveProtocol(asyncio.DatagramProtocol):
         elif self.rebroadcast_mode == 'payload':
             # In testing this did not work as expected for PVAccess
             # The reason seems to be that most implementations ignore the IP address
-            # encoded in the search message payload and instead use the UDP src 
+            # encoded in the search message payload and instead use the UDP src
             # address. Since in this implementation that points back to this relay
             # the client can't connect to the server.
 

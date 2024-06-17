@@ -49,6 +49,26 @@ class UDPRelayTransmit():
         self.ip_whitelist = [] # NotImplemented
 
 
+    async def _send_to_relays_bytes(self, msgbytes : bytes):
+        """  Send bytes to the remote relays """
+
+        for remote_relay in self.remote_relays:
+            logger.debug(
+                "Send to (%s, %i) message: %r",
+                remote_relay, self.remote_port, msgbytes,
+            )
+            sock_family = socket.AF_INET
+            if isinstance(remote_relay, ipaddress.IPv6Address):
+                sock_family = socket.AF_INET6
+
+            with socket.socket(sock_family, socket.SOCK_DGRAM) as s:
+                s.setblocking(False)
+                loop = asyncio.get_running_loop()
+                await loop.sock_sendto(s, msgbytes, (str(remote_relay), self.remote_port))
+
+        return True # continue loop in start() function
+
+
     async def _send_to_relays_payload(self, packet: Packet):
         """
         Callback to send whole packet to other relays 
@@ -63,42 +83,19 @@ class UDPRelayTransmit():
 
         relay_payload = magic_id + sport.to_bytes(2, 'big') + dport.to_bytes(2, 'big') + pkt_payload
 
-        for remote_relay in self.remote_relays:
-            logger.debug(
-                "Send to (%s, %i) message: %r",
-                remote_relay, self.remote_port, relay_payload,
-            )
-            sock_family = socket.AF_INET
-            if isinstance(remote_relay, ipaddress.IPv6Address):
-                sock_family = socket.AF_INET6
+        return await self._send_to_relays_bytes(relay_payload)
 
-            with socket.socket(sock_family, socket.SOCK_DGRAM) as s:
-                s.setblocking(False)
-                loop = asyncio.get_running_loop()
-                await loop.sock_sendto(s, relay_payload, (str(remote_relay), self.remote_port))
 
     async def _send_to_relays_packet(self, packet: Packet):
         """
         Callback to send whole packet to other relays 
         if packet passes sniffer filters
         """
-
         logger.debug("Received UDP broadcast message:\n%s", packet)
 
         pkt_raw = packet.raw
-        for remote_relay in self.remote_relays:
-            logger.debug(
-                "Send to (%s, %i) message: %r",
-                remote_relay, self.remote_port, pkt_raw,
-            )
-            sock_family = socket.AF_INET
-            if isinstance(remote_relay, ipaddress.IPv6Address):
-                sock_family = socket.AF_INET6
 
-            with socket.socket(sock_family, socket.SOCK_DGRAM) as s:
-                s.setblocking(False)
-                loop = asyncio.get_running_loop()
-                await loop.sock_sendto(s, pkt_raw, (str(remote_relay), self.remote_port))
+        return await self._send_to_relays_bytes(pkt_raw)
 
 
     def l1filter(self, rawpacket : tuple) -> bool:
@@ -149,8 +146,9 @@ class UDPRelayTransmit():
         return True
 
     async def start(self) -> None:
+        logger.setLevel(logging.DEBUG)
+        logging.basicConfig(level=logging.DEBUG)
         """ Monitor for UDP broadcasts on the specified port """
-
         #create a AF_PACKET type raw socket (thats basically packet level)
         #define ETH_P_ALL    0x0003          /* Every packet (be careful!!!) */
         #define ETH_P_IP     0x0800          IP packets only
@@ -192,7 +190,9 @@ class UDPRelayTransmit():
                     continue
 
                 # Send to other relays
-                await self._rebroadcast(packet)
+                # There's a weird return here that always returns True to continue the loop
+                # to make this possible to unit test
+                self._loop_forever = await self._rebroadcast(packet)
 
     def stop(self):
         """ Stop the main event loop in the start function """
