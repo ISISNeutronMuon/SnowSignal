@@ -21,7 +21,7 @@ class TestUDPRelayTransmitMethods(unittest.IsolatedAsyncioTestCase):
     def _create_broadcast_test_packet(self) -> udp_relay_transmit.Packet:
         packet =  scapy.layers.l2.Ether(dst="ff:ff:ff:ff:ff:ff", src='00:0a:1b:2c:3d:4e') \
                  /scapy.layers.inet.IP(dst='255.255.255.255', src='127.0.0.1') \
-                 /scapy.layers.inet.UDP() \
+                 /scapy.layers.inet.UDP(dport=5076) \
                  /scapy.packet.Raw(load=self._test_payload)
 
         return udp_relay_transmit.Packet(scapy.compat.raw(packet))
@@ -105,15 +105,31 @@ class TestUDPRelayTransmitMethods(unittest.IsolatedAsyncioTestCase):
         transmitter.set_remote_relays(remote_relays)
         self.assertEqual(transmitter.remote_relays, remote_relays)
 
-    # #@patch('socket.socket')
-    # async def test_start(self)#, socket_mock : unittest.mock.AsyncMock):
-    #     transmitter = udp_relay_transmit.UDPRelayTransmit()
 
-    #     test_packet = (self._create_broadcast_test_packet(), ('127.0.0.1', 5076))
-    #     with (
-    #         patch('asyncio.SelectorEventLoop.sock_recvfrom', return_value=test_packet),
-    #         patch('src.udp_relay_transmit.UDPRelayTransmit._send_to_relays_bytes', return_value=False) as rebroad_mock
-    #     ):
-    #         await transmitter.start()
+    async def test_valid_packet_sent(self): #, socket_mock : unittest.mock.AsyncMock):
+        """ 
+        This test took a lot of work to get right! It checks a valid packet passes
+        all filters and gets dispatched to the relays. The code under test needed
+        restructuring with the _continue_while_loop() in order to stop if a 
+        filter failed. 
+        """
+        transmitter = udp_relay_transmit.UDPRelayTransmit()
 
-    #     rebroad_mock.assert_called_once()
+        # Create valid packet to pass all filters
+        test_packet = (self._create_broadcast_test_packet().raw, ('eth0', 5076))
+        with (
+            patch('asyncio.SelectorEventLoop.sock_recvfrom', return_value=test_packet),
+            patch('src.udp_relay_transmit.UDPRelayTransmit._continue_while_loop', return_value=False),
+            patch.object(transmitter, 'l1filter', wraps=transmitter.l1filter) as l1filter_mock,
+            patch.object(transmitter, 'l2filter', wraps=transmitter.l2filter) as l2filter_mock,
+            patch.object(transmitter, 'l3filter', wraps=transmitter.l3filter) as l3filter_mock,
+            patch.object(transmitter, 'l4filter', wraps=transmitter.l4filter) as l4filter_mock,
+            patch('src.udp_relay_transmit.UDPRelayTransmit._send_to_relays_bytes') as sendtorelays_mock,
+        ):
+            await transmitter.start()
+
+        l1filter_mock.assert_called_once()
+        l2filter_mock.assert_called_once()
+        l3filter_mock.assert_called_once()
+        l4filter_mock.assert_called_once()
+        sendtorelays_mock.assert_called_once()

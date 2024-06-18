@@ -66,8 +66,6 @@ class UDPRelayTransmit():
                 loop = asyncio.get_running_loop()
                 await loop.sock_sendto(s, msgbytes, (str(remote_relay), self.remote_port))
 
-        return True # continue loop in start() function
-
 
     async def _send_to_relays_payload(self, packet: Packet):
         """
@@ -83,7 +81,7 @@ class UDPRelayTransmit():
 
         relay_payload = magic_id + sport.to_bytes(2, 'big') + dport.to_bytes(2, 'big') + pkt_payload
 
-        return await self._send_to_relays_bytes(relay_payload)
+        await self._send_to_relays_bytes(relay_payload)
 
 
     async def _send_to_relays_packet(self, packet: Packet):
@@ -95,7 +93,7 @@ class UDPRelayTransmit():
 
         pkt_raw = packet.raw
 
-        return await self._send_to_relays_bytes(pkt_raw)
+        await self._send_to_relays_bytes(pkt_raw)
 
 
     def l1filter(self, rawpacket : tuple) -> bool:
@@ -145,15 +143,17 @@ class UDPRelayTransmit():
 
         return True
 
+
     async def start(self) -> None:
-        logger.setLevel(logging.DEBUG)
-        logging.basicConfig(level=logging.DEBUG)
         """ Monitor for UDP broadcasts on the specified port """
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.DEBUG)
         #create a AF_PACKET type raw socket (thats basically packet level)
         #define ETH_P_ALL    0x0003          /* Every packet (be careful!!!) */
         #define ETH_P_IP     0x0800          IP packets only
         with socket.socket( socket.AF_PACKET, # pylint: disable=no-member
-                            socket.SOCK_RAW , socket.ntohs(0x0800)
+                            socket.SOCK_RAW , 
+                            socket.ntohs(0x0800)
                           ) as sock:
             sock.setblocking(False)
 
@@ -166,33 +166,41 @@ class UDPRelayTransmit():
                     # Check Level 1 physical layer, i.e. network interface
                     if not self.l1filter(packet):
                         logger.debug('Failed l1filter')
+                        self._loop_forever = self._continue_while_loop()
                         continue
 
                     # Check Level 2 data link layer, i.e. ethernet header
                     packet = Packet(packet[0])
                     if not self.l2filter(packet):
                         logger.debug('Failed l2filter')
+                        self._loop_forever = self._continue_while_loop()
                         continue
 
                     # Check Level 3 network layer, i.e. IP protocol
                     packet.decode_ip()
                     if not self.l3filter(packet):
                         logger.debug('Failed l3filter')
+                        self._loop_forever = self._continue_while_loop()
                         continue
 
                     # Check Level 4 transport protocol, i.e. UDP
                     packet.decode_udp()
                     if not self.l4filter(packet):
                         logger.debug('Failed l4filter')
+                        self._loop_forever = self._continue_while_loop()
                         continue
                 except BadPacketException as bpe:
                     logger.debug("Malformed packet %r", bpe)
+                    self._loop_forever = self._continue_while_loop()
                     continue
 
                 # Send to other relays
-                # There's a weird return here that always returns True to continue the loop
-                # to make this possible to unit test
-                self._loop_forever = await self._rebroadcast(packet)
+                await self._rebroadcast(packet)
+                self._loop_forever = self._continue_while_loop()
+
+    def _continue_while_loop(self) -> bool:
+        """ This function exists purely to allow unit testing of the start() function below """
+        return self._loop_forever
 
     def stop(self):
         """ Stop the main event loop in the start function """
