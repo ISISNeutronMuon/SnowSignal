@@ -3,7 +3,6 @@
 import asyncio
 import ipaddress
 import logging
-import random
 import struct
 
 import scapy.compat
@@ -12,7 +11,9 @@ import scapy.layers
 import scapy.layers.inet
 import scapy.packet
 import scapy.sendrecv
-from .netutils import get_macaddress_from_iface, get_localipv4_from_iface, get_broadcast_from_iface
+
+from src.packet import Packet
+from .netutils import get_macaddress_from_iface, machine_readable_mac
 
 # Logging and configuration of Scapy
 logger = logging.getLogger(__name__)
@@ -32,10 +33,8 @@ class UDPRelayReceiveProtocol(asyncio.DatagramProtocol):
         self.transport = None  # Hasn't been initialised yet
 
         if config:
-            self.rebroadcast_mode = config.rebroadcast_mode
             self.iface = config.target_interface
         else:
-            self.rebroadcast_mode = 'payload'
             self.iface = 'eth0'
 
         # Assume the MAC address is immutable
@@ -59,68 +58,39 @@ class UDPRelayReceiveProtocol(asyncio.DatagramProtocol):
             data,
         )
 
-        # Create a packet based on a whole scapy-encoded packet we received from
-        # another relay, or simply the payload of another packet
-        if self.rebroadcast_mode == 'packet':
-            # Reconstitute the raw data back into a scapy packet. Note that we start
-            # at the bottommost layer and the higher layers ought to be build
-            # automatically. In testing in Docker Swarm some weird anomalies were
-            # discovered but these are mitigated by packet.show2() further down.
-            # The exception is that on Swarm the src was not created until that point.
-            # But since we need to set the src we include it in the packet build here
-            # even though it doesn't seem to be correctly set
-            # TODO: What happens if we receive data that can't be turned
-            # into a scapy packet?
-            try:
-                packet = scapy.layers.l2.Ether(data, src=self.mac)
-            except struct.error as err:
-                logger.debug("Received anomalous data from %s which could not be ingested, "
-                             "triggerred exception %s", addr, err)
-                return
-
-            # Change the packet ethernet source to be the mac address of this
-            # network interface. In this way we can ignore these broadcasts
-            # using the rules in the PVAccessSniffer and prevent UDP storms
-            packet[scapy.layers.l2.Ether].src = self.mac
-
-            # Force a recalculation of the ethernet checksum
-            del packet.chksum
-            del packet[scapy.layers.inet.UDP].chksum
-        elif self.rebroadcast_mode == 'payload':
-            # In testing this did not work as expected for PVAccess
-            # The reason seems to be that most implementations ignore the IP address
-            # encoded in the search message payload and instead use the UDP src
-            # address. Since in this implementation that points back to this relay
-            # the client can't connect to the server.
-
-            # Decode the received payload
-            if data[0:2] != b'SS':
-                logger.debug("Malformed packet received")
-                return
-
-            # IPv4 packet structure: https://en.wikipedia.org/wiki/IPv4#Packet_structure
-            # UDP datagram structure: https://en.wikipedia.org/wiki/User_Datagram_Protocol#UDP_datagram_structure
-            pkt_id = random.randint(0, 65535)
-            pkt_flags = 'DF' # This is how it's set in the PVAccess packets I've inspected
-            udp_sport = int.from_bytes(data[2:4], byteorder='big')
-            udp_dport = int.from_bytes(data[4:6], byteorder='big')
-            payload = data[6:]
-
-            packet =  scapy.layers.l2.Ether(dst="ff:ff:ff:ff:ff:ff") \
-                     /scapy.layers.inet.IP(dst=get_broadcast_from_iface(self.iface), id=pkt_id, flags=pkt_flags) \
-                     /scapy.layers.inet.UDP(sport=udp_sport, dport=udp_dport) \
-                     /scapy.packet.Raw(load=payload)
-
-            # For some reason in swarm testing src isn't being set
-            if packet[scapy.layers.l2.Ether].src == '00:00:00:00:00:00':
-                packet[scapy.layers.l2.Ether].src = get_macaddress_from_iface(self.iface)
-
-            if packet[scapy.layers.inet.IP].src == '0.0.0.0':
-                packet[scapy.layers.inet.IP].src = get_localipv4_from_iface(self.iface)
-
+        # Decode the received payload
+        if data[0:2] == b'SS':
+            data = data[2:]
         else:
-            logger.error('Unknown rebroadcast mode %s', self.rebroadcast_mode)
-            raise SyntaxError(f'Unknown rebroadcast mode {self.rebroadcast_mode}')
+            logger.debug("Malformed packet received")
+            return
+
+        # Alter the source mac address of the received packet so it originates from the local iface
+        packet = Packet(data)
+        packet.eth_src_mac = machine_readable_mac(self.mac) # TODO: Fix this!
+        packet = packet.raw
+
+        # Reconstitute the raw data back into a scapy packet. Note that we start
+        # at the bottommost layer and the higher layers ought to be build
+        # automatically. In testing in Docker Swarm some weird anomalies were
+        # discovered but these are mitigated by packet.show2() further down.
+        # The exception is that on Swarm the src was not created until that point.
+        # But since we need to set the src we include it in the packet build here
+        # even though it doesn't seem to be correctly set
+        # TODO: What happens if we receive data that can't be turned
+        # into a scapy packet?
+        try:
+            packet = scapy.layers.l2.Ether(data)
+        except struct.error as err:
+            logger.debug("Received anomalous data from %s which could not be ingested, "
+                            "triggered exception %s", addr, err)
+            return
+
+        packet[scapy.layers.l2.Ether].src = self.mac
+
+        # Force a recalculation of the ethernet checksum
+        del packet.chksum
+        del packet[scapy.layers.inet.UDP].chksum
 
         # TODO: Logic to validate what we're receiving as a PVAccess message
         # Note that although doing the validation on receipt means we're doing

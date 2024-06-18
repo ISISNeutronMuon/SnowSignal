@@ -20,13 +20,12 @@ class TestUDPRelayReceiveMethods(unittest.TestCase):
     def setUp(self):
         self._test_payload = b'testdata'
 
-    def _create_receiver(self, rebroadcast_mode) -> udp_relay_receive.UDPRelayReceiveProtocol:
+    def _create_receiver(self) -> udp_relay_receive.UDPRelayReceiveProtocol:
         class Config:
-            def __init__(self, rebroadcast_mode):
+            def __init__(self):
                 self.target_interface = 'eth0'
-                self.rebroadcast_mode = rebroadcast_mode
 
-        config = Config(rebroadcast_mode)
+        config = Config()
         if sys.platform == 'win32':
             config.target_interface = 'Ethernet'
 
@@ -46,50 +45,22 @@ class TestUDPRelayReceiveMethods(unittest.TestCase):
         This is supposed to fail silently expect for a log message.
         """
         data = b'badbytes'
-        receiver = self._create_receiver('packet')
+        receiver = self._create_receiver()
         receiver.datagram_received(data, ('192.168.0.1', 7124))
         scapy_sendp_mock.assert_not_called()
 
     @patch('scapy.sendrecv.sendp')
     def test_datagram_received_goodpacket(self, scapy_sendp_mock : unittest.mock.Mock):
-        # Now simulate receiving a well-formed packet
+        """ Simulate receiving a well-formed packet """
 
         packet = self._create_test_packet()
-        receiver = self._create_receiver('packet')
-        receiver.datagram_received(scapy.compat.raw(packet), ('192.168.0.1', 7124))
+        receiver = self._create_receiver()
+        receiver.datagram_received(b'SS'+scapy.compat.raw(packet), ('192.168.0.1', 7124))
         scapy_sendp_mock.assert_called_once()
 
         # Make some basic checks on the packet we've pretended to send
-        modified_packet : scapy.packet.Packet = scapy_sendp_mock.call_args[0][0]
-        pkt_payload = scapy.compat.raw(modified_packet[scapy.layers.inet.UDP].payload)
-
-        self.assertEqual(pkt_payload, self._test_payload)
-        self.assertEqual(scapy_sendp_mock.call_args[1]['iface'], receiver.iface)
-
-    @patch('scapy.sendrecv.sendp')
-    def test_datagram_received_badpayload(self, scapy_sendp_mock : unittest.mock.Mock):
-        """ Check that an obviously malformed payload doesn't trigger sending a packet. 
-        This is supposed to fail silently expect for a log message.
-        """
-        data = b'badbytes'
-        receiver = self._create_receiver('payload')
-        receiver.rebroadcast_mode = 'payload'
-        receiver.datagram_received(data, ('192.168.0.1', 7124))
-        scapy_sendp_mock.assert_not_called()
-
-    @patch('scapy.sendrecv.sendp')
-    def test_datagram_received_goodpayload(self, scapy_sendp_mock : unittest.mock.Mock):
-
-        data = (b'SS' + int(5076).to_bytes(2, 'big') +
-                        int(5076).to_bytes(2, 'big') +
-                        self._test_payload)
-        receiver = self._create_receiver('payload')
-        receiver.rebroadcast_mode = 'payload'
-        receiver.datagram_received(data, ('192.168.0.1', 7124))
-        scapy_sendp_mock.assert_called_once()
-
-        # Make some basic checks on the packet we've pretended to send
-        modified_packet : scapy.packet.Packet = scapy_sendp_mock.call_args[0][0]
+        raw_bytes : bytes = scapy_sendp_mock.call_args[0][0]
+        modified_packet = scapy.layers.l2.Ether(raw_bytes)
         pkt_payload = scapy.compat.raw(modified_packet[scapy.layers.inet.UDP].payload)
 
         self.assertEqual(pkt_payload, self._test_payload)

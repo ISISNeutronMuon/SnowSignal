@@ -6,7 +6,7 @@ import logging
 import socket
 
 from .packet import BadPacketException, EthernetProtocol, Packet
-from .netutils import get_localhost_macs, machine_readable_mac
+from .netutils import get_localhost_macs, human_readable_mac, machine_readable_mac
 
 logger = logging.getLogger(__name__)
 
@@ -35,18 +35,24 @@ class UDPRelayTransmit():
         # otherwise use some sensible defaults
         if config:
             self._iface = config.target_interface
-
-            if config.rebroadcast_mode == 'packet':
-                self._rebroadcast = self._send_to_relays_packet
-            elif config.rebroadcast_mode == 'payload':
-                self._rebroadcast = self._send_to_relays_payload
         else:
             self._iface = 'eth0'
-            self._rebroadcast = self._send_to_relays_payload
 
         self._macs = get_localhost_macs()
         self._macs = [machine_readable_mac(x) for x in self._macs]
         self.ip_whitelist = [] # NotImplemented
+
+
+    async def _send_to_relays_packet(self, packet: Packet):
+        """
+        Callback to send whole packet to other relays 
+        if packet passes sniffer filters
+        """
+        logger.debug("Transmitting to relays UDP broadcast message:\n%s", packet)
+
+        pkt_raw = b'SS' + packet.raw
+
+        await self._send_to_relays_bytes(pkt_raw)
 
 
     async def _send_to_relays_bytes(self, msgbytes : bytes):
@@ -65,35 +71,6 @@ class UDPRelayTransmit():
                 s.setblocking(False)
                 loop = asyncio.get_running_loop()
                 await loop.sock_sendto(s, msgbytes, (str(remote_relay), self.remote_port))
-
-
-    async def _send_to_relays_payload(self, packet: Packet):
-        """
-        Callback to send whole packet to other relays 
-        if packet passes sniffer filters
-        """
-        logger.debug("Received UDP broadcast message:\n%s", packet)
-
-        magic_id = b'SS'
-        sport = packet.udp_src_port
-        dport = packet.udp_dst_port
-        pkt_payload = packet.get_udp_payload()
-
-        relay_payload = magic_id + sport.to_bytes(2, 'big') + dport.to_bytes(2, 'big') + pkt_payload
-
-        await self._send_to_relays_bytes(relay_payload)
-
-
-    async def _send_to_relays_packet(self, packet: Packet):
-        """
-        Callback to send whole packet to other relays 
-        if packet passes sniffer filters
-        """
-        logger.debug("Received UDP broadcast message:\n%s", packet)
-
-        pkt_raw = packet.raw
-
-        await self._send_to_relays_bytes(pkt_raw)
 
 
     def l1filter(self, rawpacket : tuple) -> bool:
@@ -117,6 +94,8 @@ class UDPRelayTransmit():
         if packet.eth_src_mac in self._macs:
             logger.debug('Source is a local MAC')
             return False
+
+        logger.debug('l2filter - eth src MAC is %s', human_readable_mac(packet.eth_src_mac))
 
         return True
 
@@ -146,8 +125,6 @@ class UDPRelayTransmit():
 
     async def start(self) -> None:
         """ Monitor for UDP broadcasts on the specified port """
-        logger = logging.getLogger(__name__)
-        logger.setLevel(logging.DEBUG)
         #create a AF_PACKET type raw socket (thats basically packet level)
         #define ETH_P_ALL    0x0003          /* Every packet (be careful!!!) */
         #define ETH_P_IP     0x0800          IP packets only
@@ -195,7 +172,7 @@ class UDPRelayTransmit():
                     continue
 
                 # Send to other relays
-                await self._rebroadcast(packet)
+                await self._send_to_relays_packet(packet)
                 self._loop_forever = self._continue_while_loop()
 
     def _continue_while_loop(self) -> bool:
@@ -214,7 +191,3 @@ class UDPRelayTransmit():
         if remote_relays != self.remote_relays:
             logger.info('Updating remote relays, will use %s', remote_relays)
             self.remote_relays = remote_relays
-
-
-# test = UDPRelayTransmit('eth0')
-# asyncio.run(test.monitor_udp_broadcasts(5076))
