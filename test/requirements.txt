@@ -1,0 +1,3 @@
+# Additional requirements for testing
+scapy==2.*
+coverage==7.*

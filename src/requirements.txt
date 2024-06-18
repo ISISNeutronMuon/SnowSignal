@@ -1,3 +1,2 @@
 configargparse==1.*
 psutil==5.*
-scapy==2.*
