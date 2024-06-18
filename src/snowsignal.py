@@ -67,8 +67,6 @@ def configure(arg_list: list[str] | None = None):
           help='Port on which to receive and transmit UDP broadcasts')
     p.add('-m', '--mesh-port', default=7124, type=int,
           help='Port on which this instance will communicate with others via UDP unicast')
-    p.add('--rebroadcast-mode', choices=['packet', 'payload'], default='packet',
-          help='Transfer the whole packet or just the payload on the mesh network')
     p.add('--other-relays', nargs='+', type=str, default=[],
           help='Manually select other relays to transmit received UDP broadcasts to')
     p.add('-l', '--log-level', choices=['debug', 'info', 'warning', 'error', 'critical'],
@@ -151,7 +149,7 @@ async def main(arg_list: list[str] | None = None, loop_forever : bool = True):
         if swarmmode:
             # Check to see if remote relays have changed 
             # e.g. containers have restarted
-            pvasniffer.set_remote_relays(discover_relays())
+            udp_sniff.set_remote_relays(discover_relays())
 
 
 if __name__ == "__main__":

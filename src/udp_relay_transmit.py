@@ -1,4 +1,16 @@
-""" The PVASniffer class is """
+""" The UDPRelayTransmit class is confusingly named. It transmits packets 
+into the relay mesh network. That means that it is also the class that 
+listens for UDP broadcasts on the specified network interface and port.
+
+It applies a number of defined filters (level 1 to level 4) to verify
+that the received packet was received on the specified network interface,
+port, that it is a broadcast packet, and that it is a well-formed UDP packet.
+Importantly it filters out any packets that were received from this network
+interfaces MAC address. 
+
+If these criteria are met then it sends the packet to the rest of the mesh
+network relays.
+"""
 
 import asyncio
 import ipaddress
@@ -12,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class UDPRelayTransmit():
-    """Listen for PVAccess UDP broadcasts and transmit to the other relays"""
+    """Listen for UDP broadcasts and transmit to the other relays"""
 
     def __init__(
         self,
@@ -85,7 +97,8 @@ class UDPRelayTransmit():
     def l2filter(self, packet : Packet) -> bool:
         """ Tests to perform on Level2 of packet, i.e. Ethernet  """
         # Make sure this is a broadcast and that its payload is an IP protocol message
-        if packet.eth_dst_mac != b'\xff\xff\xff\xff\xff\xff' or packet.eth_protocol == EthernetProtocol.UNKNOWN:
+        if (packet.eth_dst_mac != b'\xff\xff\xff\xff\xff\xff' or
+            packet.eth_protocol == EthernetProtocol.UNKNOWN):
             logger.debug('Not broadcast or not known ethernet protocol, packet %r', packet)
             return False
 
@@ -129,7 +142,7 @@ class UDPRelayTransmit():
         #define ETH_P_ALL    0x0003          /* Every packet (be careful!!!) */
         #define ETH_P_IP     0x0800          IP packets only
         with socket.socket( socket.AF_PACKET, # pylint: disable=no-member
-                            socket.SOCK_RAW , 
+                            socket.SOCK_RAW,
                             socket.ntohs(0x0800)
                           ) as sock:
             sock.setblocking(False)
