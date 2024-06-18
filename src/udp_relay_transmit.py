@@ -103,12 +103,9 @@ class UDPRelayTransmit():
             return False
 
         # Do not process packets sourced from this machine
-        # TODO: Ban all MAC addresses from the machine
         if packet.eth_src_mac in self._macs:
             logger.debug('Source is a local MAC')
             return False
-
-        logger.debug('l2filter - eth src MAC is %s', human_readable_mac(packet.eth_src_mac))
 
         return True
 
