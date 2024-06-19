@@ -12,6 +12,7 @@ import scapy.packet
 import scapy.sendrecv
 
 from src import snowsignal, udp_relay_receive, udp_relay_transmit
+from src.packet import Packet
 
 class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
     """ Test the asynch functions in snowsignal.py """
@@ -32,29 +33,36 @@ class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
 
         await snowsignal.main('--log-level=error', loop_forever=False)
 
-    # #@patch('src.udp_relay_receive.UDPRelayReceiveProtocol', wraps=udp_relay_receive.UDPRelayReceiveProtocol)
-    # @patch('src.snowsignal.UDPRelayTransmit', wraps=udp_relay_transmit.UDPRelayTransmit)
-    # async def test_integration(self, relay_transmit_mock: unittest.mock.AsyncMock):
-    #     """ Simple integration test """
+    @patch.object(snowsignal.UDPRelayReceive, 'datagram_received')
+    async def test_integration(self,
+                               receive_datagram_mock : unittest.mock.AsyncMock, 
+                               ):
+        """ Simple integration test """
 
-    #     main_task = asyncio.create_task( snowsignal.main('--log-level=error', loop_forever=True) )
+        main_task = asyncio.create_task( snowsignal.main('--log-level=debug', loop_forever=True) )
 
-    #     # Give time for setup to happen
-    #     await asyncio.sleep(0.5)
+        # Give time for setup to happen
+        await asyncio.sleep(0.5)
 
-    #     # Send a broadcast packet and check if it is sent to this relay
-    #     # and correctly rejected
-    #     scapy.sendrecv.sendp(self._create_broadcast_test_packet(), 'eth0')
+        # Send a broadcast packet and check if it is sent to this relay
+        # and correctly rejected
+        test_packet = self._create_broadcast_test_packet()
+        scapy.sendrecv.sendp(test_packet, 'eth0')
 
-    #     # And some time for packets to fly around
-    #     await asyncio.sleep(0.25)
+        # And some time for packets to fly around
+        await asyncio.sleep(0.25)
 
-    #     # Then test if it all worked!
-    #     #relay_received_mock.datagram_received.assert_called_once()
-    #     print(relay_transmit_mock.call_args_list, relay_transmit_mock.mock_calls)
-    #     relay_transmit_mock.start.assert_called_once()
+        # Then test if it all worked!
+        #transmit_to_relays_mock._send_to_relays_bytes.assert_called_once()
+        raw_packet = scapy.compat.raw(test_packet)
+        receive_datagram_mock.assert_called_once()
+        print(f"Send    {len(b'SS'+raw_packet)} bytes   {b'SS'+raw_packet}")
+        print(f"Receive {len(receive_datagram_mock.call_args[0][0])} bytes   {receive_datagram_mock.call_args[0][0]}")
+        packet = Packet(b'SS'+raw_packet)
+        print(f"Send    {len(packet.raw)} bytes   {packet.raw}")
+        self.assertEqual(receive_datagram_mock.call_args[0][0], b'SS'+raw_packet)
 
-    #     main_task.cancel()
+        main_task.cancel()
 
 class TestSnowSignalSynch(unittest.TestCase):
     """ Test the non-asynch functions in snowsignal"""
