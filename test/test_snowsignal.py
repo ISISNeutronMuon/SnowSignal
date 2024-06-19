@@ -38,7 +38,7 @@ class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
     async def test_main_runs(self):
         """ See if main executes without any problems! """
 
-        await snowsignal.main('--log-level=debug', loop_forever=False)
+        await snowsignal.main('--log-level=error', loop_forever=False)
 
     @patch.object(snowsignal.UDPRelayReceive, 'datagram_received')
     async def test_integration(self,
@@ -46,7 +46,7 @@ class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
                                ):
         """ Simple integration test """
 
-        main_task = asyncio.create_task( snowsignal.main('--log-level=error', loop_forever=True) )
+        main_task = asyncio.create_task( snowsignal.main('--log-level=debug', loop_forever=True) )
 
         # Give time for setup to happen
         await asyncio.sleep(0.5)
