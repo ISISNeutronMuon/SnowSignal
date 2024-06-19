@@ -58,7 +58,7 @@ class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
         scapy.sendrecv.sendp(send_packet, 'eth0')
 
         # And some time for packets to fly around
-        await asyncio.sleep(0.25)
+        await asyncio.sleep(0.75)
 
         # Then test if it all worked!
         #transmit_to_relays_mock._send_to_relays_bytes.assert_called_once()
