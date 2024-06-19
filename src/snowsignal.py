@@ -14,7 +14,7 @@ from .udp_relay_transmit import UDPRelayTransmit
 logger = logging.getLogger()
 
 def is_swarmmode() -> bool:
-    ''' Crude check to see if we're running in docker swarm'''
+    """ Crude check to see if we're running in docker swarm """
 
     swarmmode = False
     try:
@@ -25,7 +25,24 @@ def is_swarmmode() -> bool:
     return swarmmode
 
 
-# Discover the other UDP Broadcast relays in the stack
+def setup_remote_relays(config, local_addr, swarmmode):
+    """ Initial setup of the remote relays. If we're not in a Docker Swarm then
+    this is largely immutable."""
+    
+    if swarmmode and not config.other_relays:
+        # Use swarm DNS magic to identify the other nodes
+        logger.debug('Using swarm DNS to identify other relays')
+        remote_relays = discover_relays()
+    elif not swarmmode and config.other_relays:
+        logger.debug('Using user configuration of other relays')
+        remote_relays = config.other_relays
+    else:
+        # Assume we're in testing mode and loopback to ourselves
+        logger.debug('Using debug mode for other relays, will relay to self')
+        remote_relays = [local_addr]
+    return remote_relays
+
+
 def discover_relays() -> list[ipaddress.ip_address]:
     """Discover the other UDP Broadcast Relays in the stack"""
 
@@ -107,49 +124,51 @@ def configure(arg_list: list[str] | None = None):
 
 # Weird "arg_list" syntax required to support unittests
 async def main(arg_list: list[str] | None = None, loop_forever : bool = True):
-    ''' Main function
-    Start PVAccessSniffer (in its own thread)
-    and relay'''
+    """ Main function
+    Load up the configuration and do some other setup. But mostly we're here
+    to start two asyncio tasks. One listens for UDP broadcasts and sends them
+    on to other relays. The other listens to the other relays and rebroadcasts
+    as they instruct. Then we sit in an infinite loop to allow these things to
+    happen!
+    """
 
-    # Configure 
+    # Configure this relay
     config = configure(arg_list)
+    # logger.setLevel(logging.DEBUG)
     logger.info('Starting with configuration %s', config)
 
+    # Get the local IP address
+    # TODO: Properly support IPv6
     local_addr = get_localipv4_from_iface(config.target_interface)
 
     # Check if we're running in a Docker Swarm
     swarmmode = is_swarmmode()
-    if swarmmode and not config.other_relays:
-        # Use swarm DNS magic to identify the other nodes
-        logger.debug('Using swarm DNS to identify other relays')
-        remote_relays = discover_relays()
-    elif not swarmmode and config.other_relays:
-        logger.debug('Using user configuration of other relays')
-        remote_relays = config.other_relays
-    else:
-        # Assume we're in testing mode and loopback to ourselves
-        logger.debug('Using debug mode for other relays, will relay to self')
-        remote_relays = [local_addr]
 
-    udp_sniff = UDPRelayTransmit(local_port=config.broadcast_port,
-                                  remote_relays=remote_relays,
-                                  remote_port=config.mesh_port,
-                                  config=config
-                                 )
-    asyncio.create_task( udp_sniff.start() )
+    # Setup the remote relays to rebroadcast from. 
+    remote_relays = setup_remote_relays(config, local_addr, swarmmode)
 
+    # Start listening for UDP broadcasts to transmit to the other relays
+    udp_relay_transmit = UDPRelayTransmit(local_port=config.broadcast_port,
+                                          remote_relays=remote_relays,
+                                          remote_port=config.mesh_port,
+                                          config=config
+                                         )
+    asyncio.create_task( udp_relay_transmit.start() )
+
+    # Listen for messages from the other relays to UDP broadcast
     asyncio.create_task( run_relay_receiver( (local_addr, config.mesh_port),
                                              config.broadcast_port,
                                              config=config
                                            )
                         )
 
+    # Loop forever, but if in swarm mode periodically recheck the relays
     while loop_forever:
         await asyncio.sleep(10)
         if swarmmode:
-            # Check to see if remote relays have changed 
+            # Check to see if remote relays have changed
             # e.g. containers have restarted
-            udp_sniff.set_remote_relays(discover_relays())
+            udp_relay_transmit.set_remote_relays(discover_relays())
 
 
 if __name__ == "__main__":

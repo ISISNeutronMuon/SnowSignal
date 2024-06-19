@@ -1,4 +1,8 @@
-""" Listen for UDP broadcasts on a port and transmit packet information to other relays """
+""" Listen for UDP broadcasts on a port and transmit packet information to other relays 
+
+This uses the standard asyncio.DatagramProtocol base class so most of the initial
+management of the UDP packet is already done for us.
+"""
 
 import asyncio
 import ipaddress
