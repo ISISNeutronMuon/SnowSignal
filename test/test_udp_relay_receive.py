@@ -20,7 +20,7 @@ class TestUDPRelayReceiveMethods(unittest.TestCase):
     def setUp(self):
         self._test_payload = b'testdata'
 
-    def _create_receiver(self) -> udp_relay_receive.UDPRelayReceiveProtocol:
+    def _create_receiver(self) -> udp_relay_receive.UDPRelayReceive:
         class Config:
             def __init__(self):
                 self.target_interface = 'eth0'
@@ -29,7 +29,7 @@ class TestUDPRelayReceiveMethods(unittest.TestCase):
         if sys.platform == 'win32':
             config.target_interface = 'Ethernet'
 
-        return udp_relay_receive.UDPRelayReceiveProtocol(5076, config)
+        return udp_relay_receive.UDPRelayReceive(5076, config)
 
     def _create_test_packet(self) -> scapy.packet.Packet:
         packet =  scapy.layers.l2.Ether(dst="00:0a:1b:2c:3d:4e", src='00:0a:1b:2c:3d:4e') \

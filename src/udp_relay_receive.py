@@ -13,12 +13,17 @@ from .netutils import get_macaddress_from_iface, machine_readable_mac
 
 logger = logging.getLogger(__name__)
 
-class UDPRelayReceiveProtocol(asyncio.DatagramProtocol):
+class UDPRelayReceive(asyncio.DatagramProtocol):
     """Listen to UDP messages from remote relays and forward them as broadcasts on the local net"""
 
-    def __init__(self, broadcast_port: int, config = None) -> None:
+    def __init__(self, 
+                 local_addr: tuple[ipaddress.ip_address, int], 
+                 broadcast_port: int, 
+                 config = None
+                ) -> None:
         super().__init__()
 
+        self.local_addr = local_addr
         self.broadcast_port = broadcast_port
         self.transport = None  # Hasn't been initialised yet
 
@@ -29,6 +34,8 @@ class UDPRelayReceiveProtocol(asyncio.DatagramProtocol):
 
         # Assume the MAC address is immutable
         self.mac = get_macaddress_from_iface(self.iface)
+
+        self._loop_forever = True
 
     def connection_made(self, transport: asyncio.DatagramTransport) -> None:
         """Handle a connection being established"""
@@ -73,33 +80,29 @@ class UDPRelayReceiveProtocol(asyncio.DatagramProtocol):
             s.send(data)
 
 
-async def run_relay_receiver(
-    local_addr: tuple[ipaddress.ip_address, int],
-    broadcast_port: int,
-    config = None
-) -> None:
-    """Start the UDP server that listens for messages from other relays and broadcasts them"""
+    async def start(self) -> None:
+        """Start the UDP server that listens for messages from other relays and broadcasts them"""
 
-    logger.info(
-        "Starting UDP server listening on %s; will rebroadcast on port %i",
-        local_addr,
-        broadcast_port,
-    )
+        logger.info(
+            "Starting UDP server listening on %s; will rebroadcast on port %i",
+            self.local_addr,
+            self.broadcast_port,
+        )
 
-    # Get a reference to the event loop as we plan to use
-    # low-level APIs.
-    loop = asyncio.get_running_loop()
+        # Get a reference to the event loop as we plan to use
+        # low-level APIs.
+        loop = asyncio.get_running_loop()
 
-    # One protocol instance will be created to serve all
-    # client requests.
-    transport, _ = await loop.create_datagram_endpoint(
-        lambda: UDPRelayReceiveProtocol(broadcast_port, config=config),
-        local_addr=local_addr
-    )
+        # One protocol instance will be created to serve all
+        # client requests.
+        transport, _ = await loop.create_datagram_endpoint(
+            lambda: self, #UDPRelayReceiveProtocol(broadcast_port, config=config),
+            local_addr=self.local_addr
+        )
 
-    try:
-        while True:
-            # Basically sleep forever!
-            await asyncio.sleep(3600)
-    finally:
-        transport.close()
+        try:
+            while self._loop_forever:
+                # Basically sleep forever!
+                await asyncio.sleep(1)
+        finally:
+            transport.close()

@@ -7,7 +7,7 @@ import os
 
 import configargparse
 from .netutils import get_localhost_ips, get_ips_from_name, get_localipv4_from_iface
-from .udp_relay_receive import run_relay_receiver
+from .udp_relay_receive import UDPRelayReceive
 from .udp_relay_transmit import UDPRelayTransmit
 
 # Logging and configuration of Scapy
@@ -28,7 +28,7 @@ def is_swarmmode() -> bool:
 def setup_remote_relays(config, local_addr, swarmmode):
     """ Initial setup of the remote relays. If we're not in a Docker Swarm then
     this is largely immutable."""
-    
+
     if swarmmode and not config.other_relays:
         # Use swarm DNS magic to identify the other nodes
         logger.debug('Using swarm DNS to identify other relays')
@@ -134,7 +134,6 @@ async def main(arg_list: list[str] | None = None, loop_forever : bool = True):
 
     # Configure this relay
     config = configure(arg_list)
-    # logger.setLevel(logging.DEBUG)
     logger.info('Starting with configuration %s', config)
 
     # Get the local IP address
@@ -144,7 +143,7 @@ async def main(arg_list: list[str] | None = None, loop_forever : bool = True):
     # Check if we're running in a Docker Swarm
     swarmmode = is_swarmmode()
 
-    # Setup the remote relays to rebroadcast from. 
+    # Identify the remote relays to send UDP broadcasts messages to
     remote_relays = setup_remote_relays(config, local_addr, swarmmode)
 
     # Start listening for UDP broadcasts to transmit to the other relays
@@ -156,11 +155,10 @@ async def main(arg_list: list[str] | None = None, loop_forever : bool = True):
     asyncio.create_task( udp_relay_transmit.start() )
 
     # Listen for messages from the other relays to UDP broadcast
-    asyncio.create_task( run_relay_receiver( (local_addr, config.mesh_port),
-                                             config.broadcast_port,
-                                             config=config
-                                           )
-                        )
+    udp_relay_receive = UDPRelayReceive(local_addr=(local_addr, config.mesh_port),
+                                        broadcast_port=config.broadcast_port,
+                                        config=config)
+    asyncio.create_task( udp_relay_receive.start() )
 
     # Loop forever, but if in swarm mode periodically recheck the relays
     while loop_forever:
