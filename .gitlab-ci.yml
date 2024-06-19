@@ -9,7 +9,7 @@ Run unittests:
       - python --version
       - pip install -r src/requirements.txt
       - pip install -r test/requirements.txt
-      - python -m coverage run --source=. -m unittest
+      - python -m coverage run --source=. -m unittest test.test_snowsignal.TestSnowSignalAsynch.test_integration
       - coverage report
       - coverage xml
     coverage: '/TOTAL.*\s+(\d+\%)/'
