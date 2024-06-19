@@ -38,7 +38,7 @@ class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
     async def test_main_runs(self):
         """ See if main executes without any problems! """
 
-        await snowsignal.main('--log-level=error', loop_forever=False)
+        await snowsignal.main('--log-level=debug', loop_forever=False)
 
     @patch.object(snowsignal.UDPRelayReceive, 'datagram_received')
     async def test_integration(self,
