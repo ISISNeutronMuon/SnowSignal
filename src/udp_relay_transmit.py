@@ -32,7 +32,7 @@ class UDPRelayTransmit():
         remote_relays: list[ipaddress.ip_address] = None,
         remote_port=7124,
         config = None
-    ):
+    ) -> None:
         self._loop_forever = True
 
         logger.info("Initialising UDPRelayTransmit listening for UDP broadcasts "
@@ -55,7 +55,7 @@ class UDPRelayTransmit():
         self.ip_whitelist = [] # NotImplemented
 
 
-    async def _send_to_relays_packet(self, packet: Packet):
+    async def _send_to_relays_packet(self, packet: Packet) -> None:
         """
         Callback to send whole packet to other relays 
         if packet passes sniffer filters
@@ -67,7 +67,7 @@ class UDPRelayTransmit():
         await self._send_to_relays_bytes(pkt_raw)
 
 
-    async def _send_to_relays_bytes(self, msgbytes : bytes):
+    async def _send_to_relays_bytes(self, msgbytes : bytes) -> None:
         """  Send bytes to the remote relays """
 
         for remote_relay in self.remote_relays:
@@ -186,14 +186,14 @@ class UDPRelayTransmit():
                 self._loop_forever = self._continue_while_loop()
 
     def _continue_while_loop(self) -> bool:
-        """ This function exists purely to allow unit testing of the start() function below """
+        """ This function exists purely to allow unit testing of the start() function above """
         return self._loop_forever
 
-    def stop(self):
+    def stop(self) -> None:
         """ Stop the main event loop in the start function """
         self._loop_forever = False
 
-    def set_remote_relays(self, remote_relays: list[ipaddress.ip_address]):
+    def set_remote_relays(self, remote_relays: list[ipaddress.ip_address]) -> None:
         """Update the list of remote relays"""
         # We check if there's a change because although it shouldn't much
         # matter if there's a race condition from making a change we might
