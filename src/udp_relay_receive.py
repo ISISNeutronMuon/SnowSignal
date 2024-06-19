@@ -18,7 +18,7 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
 
     def __init__(self, 
                  local_addr: tuple[ipaddress.ip_address, int], 
-                 broadcast_port: int, 
+                 broadcast_port: int,
                  config = None
                 ) -> None:
         super().__init__()

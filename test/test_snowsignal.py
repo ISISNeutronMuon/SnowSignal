@@ -1,5 +1,6 @@
 """ Tests for the snowsignal file """
 import asyncio
+import logging
 import os
 import unittest
 from unittest.mock import patch
@@ -14,15 +15,21 @@ import scapy.sendrecv
 from src import snowsignal, udp_relay_receive, udp_relay_transmit
 from src.packet import Packet
 
+# Scapy a bit chatty so quiet it a bit
+scapy.config.conf.use_pcap = False
+scapy.config.conf.use_npcap = False
+scapy.config.conf.verb = 0
+scapy.config.conf.logLevel = logging.ERROR
+
 class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
     """ Test the asynch functions in snowsignal.py """
 
     def setUp(self):
         self._test_payload = b'test_payload'
 
-    def _create_broadcast_test_packet(self) -> scapy.packet.Packet:
+    def _create_broadcast_test_packet(self, src) -> scapy.packet.Packet:
         packet =  scapy.layers.l2.Ether(dst="ff:ff:ff:ff:ff:ff", src='00:0a:1b:2c:3d:4e') \
-                 /scapy.layers.inet.IP(dst='255.255.255.255', src='127.0.0.1') \
+                 /scapy.layers.inet.IP(dst='255.255.255.255', src=src, ihl=5, flags='DF') \
                  /scapy.layers.inet.UDP(dport=5076) \
                  /scapy.packet.Raw(load=self._test_payload)
 
@@ -39,28 +46,26 @@ class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
                                ):
         """ Simple integration test """
 
-        main_task = asyncio.create_task( snowsignal.main('--log-level=debug', loop_forever=True) )
+        main_task = asyncio.create_task( snowsignal.main('--log-level=error', loop_forever=True) )
 
         # Give time for setup to happen
         await asyncio.sleep(0.5)
 
         # Send a broadcast packet and check if it is sent to this relay
         # and correctly rejected
-        test_packet = self._create_broadcast_test_packet()
-        scapy.sendrecv.sendp(test_packet, 'eth0')
+        send_packet = self._create_broadcast_test_packet('172.21.0.1')
+        send_packet.show2(dump=True)
+        scapy.sendrecv.sendp(send_packet, 'eth0')
 
         # And some time for packets to fly around
         await asyncio.sleep(0.25)
 
         # Then test if it all worked!
         #transmit_to_relays_mock._send_to_relays_bytes.assert_called_once()
-        raw_packet = scapy.compat.raw(test_packet)
         receive_datagram_mock.assert_called_once()
-        print(f"Send    {len(b'SS'+raw_packet)} bytes   {b'SS'+raw_packet}")
-        print(f"Receive {len(receive_datagram_mock.call_args[0][0])} bytes   {receive_datagram_mock.call_args[0][0]}")
-        packet = Packet(b'SS'+raw_packet)
-        print(f"Send    {len(packet.raw)} bytes   {packet.raw}")
-        self.assertEqual(receive_datagram_mock.call_args[0][0], b'SS'+raw_packet)
+
+        received_packet = scapy.layers.l2.Ether(receive_datagram_mock.call_args[0][0][2:])
+        self.assertEqual(send_packet.show2(dump=True), received_packet.show2(dump=True))
 
         main_task.cancel()
 
