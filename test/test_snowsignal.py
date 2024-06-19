@@ -48,7 +48,7 @@ class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
         main_task = asyncio.create_task( snowsignal.main('--log-level=debug', loop_forever=True) )
 
         # Give time for setup to happen
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(1.5)
 
         # Send a broadcast packet and check if it is sent to this relay
         # and correctly rejected
