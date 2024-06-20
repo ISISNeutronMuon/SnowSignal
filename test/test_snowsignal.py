@@ -54,7 +54,7 @@ class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
         # and correctly rejected
         send_packet = self._create_broadcast_test_packet('172.21.0.1')
         send_packet.show2(dump=True)
-        scapy.sendrecv.sendp(send_packet, 'eth0')
+        scapy.sendrecv.sendp(send_packet, 'lo')
 
         # And some time for packets to fly around
         await asyncio.sleep(0.75)
