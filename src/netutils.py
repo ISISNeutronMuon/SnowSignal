@@ -49,7 +49,10 @@ def get_localhost_ips() -> list[ipaddress.ip_address]:
 class ResourceNotFoundException(OSError):
     """ Indicate an expected hardware resource could not be found """
 
-def get_from_iface(iface : str, family : Union[socket.AddressFamily, psutil.AF_LINK], attribute : str = 'address'):
+def get_from_iface(iface : str, 
+                   family : Union[socket.AddressFamily, psutil.AF_LINK], 
+                   attribute : str = 'address'
+                   ):
     """ Get the IP address associated with a network interface """
     snicaddrs = psutil.net_if_addrs()[iface]
     for snicaddr in snicaddrs:
