@@ -6,7 +6,6 @@ import logging
 import os
 
 import configargparse
-import psutil
 from .netutils import get_localhost_ips, get_ips_from_name, get_localipv4_from_iface
 from .udp_relay_receive import UDPRelayReceive
 from .udp_relay_transmit import UDPRelayTransmit
@@ -136,8 +135,6 @@ async def main(arg_list: list[str] | None = None, loop_forever : bool = True):
     # Configure this relay
     config = configure(arg_list)
     logger.info('Starting with configuration %s', config)
-
-    logger.debug('Local interfaces %r', psutil.net_if_addrs())
 
     # Get the local IP address
     # TODO: Properly support IPv6

@@ -44,14 +44,17 @@ class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
                                receive_datagram_mock : unittest.mock.AsyncMock, 
                                ):
         """ Simple integration test """
-
-        main_task = asyncio.create_task( snowsignal.main('--target-interface=lo --log-level=debug', loop_forever=True) )
+        # Start main, note that we are using the loopback interface. This is
+        # important for CI/CD testing (and handy for keeping our test packets
+        # local).
+        main_task = asyncio.create_task( snowsignal.main('--target-interface=lo --log-level=error',
+                                                         loop_forever=True)
+                                       )
 
         # Give time for setup to happen
         await asyncio.sleep(0.5)
 
-        # Send a broadcast packet and check if it is sent to this relay
-        # and correctly rejected
+        # Send a test broadcast packet to the loopback interface 
         local_addr = netutils.get_localipv4_from_iface('lo')
         send_packet = self._create_broadcast_test_packet(local_addr)
         send_packet.show2(dump=True)
@@ -61,12 +64,14 @@ class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
         await asyncio.sleep(0.25)
 
         # Then test if it all worked!
-        #transmit_to_relays_mock._send_to_relays_bytes.assert_called_once()
+        # First test that we received a packet from ourself
         receive_datagram_mock.assert_called_once()
 
+        # Slightly complicated test that the packet received is correct
         received_packet = scapy.layers.l2.Ether(receive_datagram_mock.call_args[0][0][2:])
         self.assertEqual(send_packet.show2(dump=True), received_packet.show2(dump=True))
 
+        # Quit main, though it probably quits anyway
         main_task.cancel()
 
 class TestSnowSignalSynch(unittest.TestCase):
