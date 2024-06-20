@@ -12,7 +12,7 @@ import scapy.layers.inet
 import scapy.packet
 import scapy.sendrecv
 
-from src import snowsignal
+from src import netutils, snowsignal
 
 # Scapy a bit chatty so quiet it a bit
 scapy.config.conf.use_pcap = False
@@ -45,19 +45,20 @@ class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
                                ):
         """ Simple integration test """
 
-        main_task = asyncio.create_task( snowsignal.main('--log-level=debug', loop_forever=True) )
+        main_task = asyncio.create_task( snowsignal.main('--target-interface=lo --log-level=debug', loop_forever=True) )
 
         # Give time for setup to happen
-        await asyncio.sleep(1.5)
+        await asyncio.sleep(0.5)
 
         # Send a broadcast packet and check if it is sent to this relay
         # and correctly rejected
-        send_packet = self._create_broadcast_test_packet('172.21.0.1')
+        local_addr = netutils.get_localipv4_from_iface('lo')
+        send_packet = self._create_broadcast_test_packet(local_addr)
         send_packet.show2(dump=True)
         scapy.sendrecv.sendp(send_packet, 'lo')
 
         # And some time for packets to fly around
-        await asyncio.sleep(0.75)
+        await asyncio.sleep(0.25)
 
         # Then test if it all worked!
         #transmit_to_relays_mock._send_to_relays_bytes.assert_called_once()
