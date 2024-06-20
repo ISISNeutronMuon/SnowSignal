@@ -41,6 +41,15 @@ There is an additional requirement that the environment variable SERVICENAME be 
 
 This allows each node in the service to automatically located and connect to the other nodes. The mesh will automatically heal as members enter and leave.
 
+### Limitations ###
+At this time this code has only been tested in Linux containers.
+
+The `UDPRelayTransmit` class requires a raw socket to operate as it needs to 
+1. Filter out UDP broadcasts with an Ethernet source originating from the local relay. The Ethernet source is rewritten to allow this filtering while the IP source is left alone.
+2. Differentiate UDP broadcast from UDP unicast messages, ignoring the latter.
+
+These require Level 1 and 2 access and thus raw sockets. As the Python socket package does not support such access on Windows it has not been possible to make this tool compatible with that OS. (And earlier version using ScaPy was compatible.)
+
 ## The Problem
 The EPICS PVAccess protocol uses a mixture of UDP broadcast, UDP unicast and TCP (in roughly that order) to establish communication between a client and a server. In this case a client is making a query for a PV and its value (or some other field), e.g. a pvget while the server holds the requested PV.
 
@@ -71,14 +80,14 @@ SnowSignal is implemented in Python and primarily uses the [scapy](https://scapy
 The SnowSignal code is in two main parts:
 
 ### 1. udp_relay_transmit
-A [scapy AsyncSniffer](https://scapy.readthedocs.io/en/latest/usage.html#asynchronous-sniffing) is used to monitor for UDP broadcasts on the specified UDP port and local interface. A scapy filter is used to ignore broadcasts either originating from local interfaces' MAC addresses or from the local IP addresses. This prevents us from reacting to our own UDP broadcasts.
+A raw socket is used to monitor for UDP broadcasts on the specified UDP port and local interface. A set of filter functions are used to filter out broadcasts either originating from local interfaces' MAC addresses or from the local IP addresses. This prevents us from reacting to our own UDP broadcasts.
 
-If a UDP broadcast packet passes the required filters either the whole scapy Packet or the UDP packet's payload is sent to the other SnowSignal instances in the mesh network. They will subsequently rebroadcast it.
+If a UDP broadcast packet passes the required filters then the whole packet is sent to the other SnowSignal instances in the mesh network. They will subsequently rebroadcast it.
 
 ### 2. udp_relay_receive
 A UDPTransmitRelay class listens for UDP unicast messages received on a specified port and broadcasts those messages on a specified local interfaces. The class is an implementation of the asynchio [DatagramProtocol](https://docs.python.org/3/library/asyncio-protocol.html#datagram-protocols) run by using [loop.create_datagram_endpoint()](https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.loop.create_datagram_endpoint). 
 
-When a UDP message is received from another SnowSignal node the payload is used via scapy to construct a UDP broadcast packet. In practice this is done using a whole scapy Packet sent as bytes, which is then altered to use the Ethernet source MAC address of the interface that will be used to send it. This means that it can be filtered out by the `udp_relay_transmit` and we do not create packet storms. 
+When a UDP message is received from another SnowSignal its payload is turned into a UDP broadcast packet. We change only the Ethernet source MAC address of packet, setting it to that of the interface that will be used to send it. This means that it can be filtered out by the `udp_relay_transmit` and we do not create packet storms. 
 
 ### Mesh Network
 The SnowSignal mesh network may be manually specified. 
