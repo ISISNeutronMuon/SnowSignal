@@ -26,9 +26,12 @@ Rebuild Image:
     image: docker
     variables:
       DOCKER_TAG: $CI_COMMIT_REF_NAME
-    
     services:
       - docker:dind
     script:
       - echo $NAME
       - docker build -t snowsignal src
+      - docker login https://harbor.stfc.ac.uk -u $DOCKER_REG_NAME --password $DOCKER_REG_TOKEN
+      - echo Build Identifiers - ${NAME}:$DOCKER_TAG
+      - docker build -t harbor.stfc.ac.uk/isis-accelerator-controls/snowsignal:$DOCKER_TAG src
+      - docker push harbor.stfc.ac.uk/isis-accelerator-controls/snowsignal:$DOCKER_TAG src
