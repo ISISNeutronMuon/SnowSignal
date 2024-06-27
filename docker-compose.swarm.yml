@@ -1,19 +1,15 @@
 services:
-  backplane:
-    image: 127.0.0.1:5000/backplane
-    build: 
-      context: ./backplane
+  snowsignal:
+    image: harbor.stfc.ac.uk/isis-accelerator-controls/snowsignal:main
     environment:
       SERVICENAME: '{{.Service.Name}}'
     networks:
-      - udptunnel-test
+      - snowsignal-test
     deploy: 
-      # mode: global
-      # placement:
-      #   max_replicas_per_node: 3
-      mode: replicated
-      replicas: 2 
+      mode: global
+      placement:
+         max_replicas_per_node: 1
 
 networks:
-  udptunnel-test:
+  snowsignal-test:
     external: true
