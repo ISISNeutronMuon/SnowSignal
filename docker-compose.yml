@@ -1,29 +1,25 @@
 services:
-    server:
-        image: snowsignal
-        build:
-            context: ./src
-        command: "sleep infinity"
-        volumes:
-            - ./:/snowsignal/
-        networks:
-            - udptest
+  snowsignal:
+    image: harbor.stfc.ac.uk/isis-accelerator-controls/snowsignal:main
+    environment:
+      SERVICENAME: '{{.Service.Name}}'
+    networks:
+      - snowsignal-test
+    deploy: 
+      mode: global
+      placement:
+         max_replicas_per_node: 1
 
-    client:
-        image: snowsignal
-        build:
-            context: ./src
-        command: "sleep infinity"
-        volumes:
-            - ./:/snowsignal/
-        networks:
-            - udptest
-
-    p4p:
-        image: harbor.stfc.ac.uk/isis-accelerator-controls/internal-pvagw-tests@sha256:ea128bdf47fc740d28ed32bf7c77ad122d824d550d2b3b0057e7c29045155f9f
-        command: "sleep infinity"
-        networks:
-            - udptest
+  probe:
+    image: harbor.stfc.ac.uk/isis-accelerator-controls/internal-pvagw-tests
+    networks:
+      - snowsignal-test
+    deploy: 
+      mode: global
+      placement:
+         max_replicas_per_node: 1
+    command: ["sleep", "infinity"]
 
 networks:
-    udptest:
+  snowsignal-test:
+    external: true
