@@ -65,6 +65,7 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         # TODO: Apply any filters
 
         # Alter the source mac address of the received packet so it originates from the local iface
+        logger.debug('Datagram MAC: %s / %s', self.mac, machine_readable_mac(self.mac))
         data = data[0:6] + machine_readable_mac(self.mac) + data[12:]
 
         # TODO: Logic to validate what we're receiving as a PVAccess message
