@@ -1,3 +1,5 @@
+version: '3.9'
+
 services:
   snowsignal:
     image: harbor.stfc.ac.uk/isis-accelerator-controls/snowsignal:main
