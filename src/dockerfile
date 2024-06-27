@@ -8,4 +8,4 @@ WORKDIR /snowsignal
 RUN pip install -r requirements.txt
 ADD *.py /snowsignal/
 
-CMD ["python", "snowsignal.py"]
+CMD ["python", "-m src.snowsignal"]
