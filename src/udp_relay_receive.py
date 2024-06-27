@@ -66,7 +66,9 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
 
         # Alter the source mac address of the received packet so it originates from the local iface
         logger.debug('Datagram MAC: %s / %s', self.mac, machine_readable_mac(self.mac))
+        logger.debug('Packet unaltered: %r', data)
         data = data[0:6] + machine_readable_mac(self.mac) + data[12:]
+        logger.debug('Packet altered:   %r', data)
 
         # TODO: Logic to validate what we're receiving as a PVAccess message
         # Note that although doing the validation on receipt means we're doing
@@ -77,7 +79,7 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         # Finally broadcast the new packet
         with socket.socket(socket.AF_PACKET, socket.SOCK_RAW) as s:
             s.bind((self.iface,0))
-            logger.debug("Broadcasting packet\n%s", data)
+            logger.debug("Broadcasting packet: %s", data)
             s.send(data)
 
 
