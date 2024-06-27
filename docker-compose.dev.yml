@@ -5,6 +5,7 @@ services:
     image: harbor.stfc.ac.uk/isis-accelerator-controls/snowsignal:main
     environment:
       SERVICENAME: '{{.Service.Name}}'
+      LOGLEVEL: 'debug'
     networks:
       - snowsignal-test
     deploy: 

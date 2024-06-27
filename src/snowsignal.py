@@ -78,15 +78,19 @@ def configure(arg_list: list[str] | None = None):
     """ Setup configuration for the SnowSignal service """
 
     p = configargparse.ArgParser()
-    p.add('-t', '--target-interface', default='eth0', type=str,
+    p.add('-t', '--target-interface', env_var='TARGET_INTERFACE', 
+          default='eth0', type=str,
           help='Target network interface')
-    p.add('-b', '--broadcast-port', default=5076, type=int,
+    p.add('-b', '--broadcast-port', env_var='BDCAST_PORT',
+          default=5076, type=int,
           help='Port on which to receive and transmit UDP broadcasts')
-    p.add('-m', '--mesh-port', default=7124, type=int,
+    p.add('-m', '--mesh-port', env_var='MESH_PORT',
+          default=7124, type=int,
           help='Port on which this instance will communicate with others via UDP unicast')
     p.add('--other-relays', nargs='+', type=str, default=[],
           help='Manually select other relays to transmit received UDP broadcasts to')
-    p.add('-l', '--log-level', choices=['debug', 'info', 'warning', 'error', 'critical'],
+    p.add('-l', '--log-level', env_var='LOGLEVEL',
+          choices=['debug', 'info', 'warning', 'error', 'critical'],
           default='info',
           help='Logging level')
 
