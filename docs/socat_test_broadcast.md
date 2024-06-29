@@ -1,0 +1,1 @@
+socat - udp-datagram:255.255.255.255:5076,broadcast
