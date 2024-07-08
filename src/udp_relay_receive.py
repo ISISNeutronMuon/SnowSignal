@@ -23,8 +23,8 @@ logger = logging.getLogger(__name__)
 class UDPRelayReceive(asyncio.DatagramProtocol):
     """Listen to UDP messages from remote relays and forward them as broadcasts on the local net"""
 
-    def __init__(self, 
-                 local_addr: tuple[ipaddress.ip_address, int], 
+    def __init__(self,
+                 local_addr: tuple[ipaddress.ip_address, int],
                  broadcast_port: int,
                  config = None
                 ) -> None:

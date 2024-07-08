@@ -78,7 +78,7 @@ def configure(arg_list: list[str] | None = None):
     """ Setup configuration for the SnowSignal service """
 
     p = configargparse.ArgParser()
-    p.add('-t', '--target-interface', env_var='TARGET_INTERFACE', 
+    p.add('-t', '--target-interface', env_var='TARGET_INTERFACE',
           default='eth0', type=str,
           help='Target network interface')
     p.add('-b', '--broadcast-port', env_var='BDCAST_PORT',
