@@ -17,6 +17,10 @@ import ipaddress
 import logging
 import socket
 
+import scapy
+import scapy.layers.l2
+import scapy.layers.inet
+
 from .packet import BadPacketException, EthernetProtocol, Packet
 from .netutils import get_localhost_macs, human_readable_mac, machine_readable_mac
 
@@ -146,18 +150,18 @@ class UDPRelayTransmit():
 
             while self._loop_forever:
                 loop = asyncio.get_running_loop()
-                packet = await loop.sock_recvfrom(sock, 1024)
-                logger.debug('Received packet %r with data %r', packet[1], packet[0])
+                raw_packet = await loop.sock_recvfrom(sock, 1024)
+                logger.debug('Received packet %r with data %r', raw_packet[1], raw_packet[0])
 
                 try:
                     # Check Level 1 physical layer, i.e. network interface
-                    if not self.l1filter(packet):
+                    if not self.l1filter(raw_packet):
                         logger.debug('Failed l1filter')
                         self._loop_forever = self._continue_while_loop()
                         continue
 
                     # Check Level 2 data link layer, i.e. ethernet header
-                    packet = Packet(packet[0])
+                    packet = Packet(raw_packet[0])
                     if not self.l2filter(packet):
                         logger.debug('Failed l2filter')
                         self._loop_forever = self._continue_while_loop()
@@ -180,6 +184,10 @@ class UDPRelayTransmit():
                     logger.debug("Malformed packet %r", bpe)
                     self._loop_forever = self._continue_while_loop()
                     continue
+
+                print(20*'-' + 'Original' + 20*'-')
+                spacket = scapy.layers.l2.Ether(raw_packet[0])
+                spacket.show()
 
                 # Send to other relays
                 await self._send_to_relays_packet(packet)

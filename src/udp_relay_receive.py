@@ -9,6 +9,11 @@ import ipaddress
 import logging
 import socket
 
+import scapy
+import scapy.layers
+import scapy.layers.l2
+import scapy.layers.inet
+
 from .netutils import get_macaddress_from_iface, machine_readable_mac
 
 logger = logging.getLogger(__name__)
@@ -65,10 +70,19 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         # TODO: Apply any filters
 
         # Alter the source mac address of the received packet so it originates from the local iface
-        logger.debug('Datagram MAC: %s / %s', self.mac, machine_readable_mac(self.mac))
-        logger.debug('Packet unaltered: %r', data)
+        # logger.debug('Datagram MAC: %s / %s', self.mac, machine_readable_mac(self.mac))
+        # logger.debug('Packet unaltered: %r', data)
+        print(20*'-' + ' 1 ' + 20*'-')
+        spacket = scapy.layers.l2.Ether(data)
+        spacket.show()
         data = data[0:6] + machine_readable_mac(self.mac) + data[12:]
-        logger.debug('Packet altered:   %r', data)
+        # logger.debug('Packet altered:   %r', data)
+        spacket = scapy.layers.l2.Ether(data)
+        print(20*'-' + ' 2 ' + 20*'-')
+        spacket.show()
+        print(20*'-' + ' 3 ' + 20*'-')
+        spacket.show2()
+        data=scapy.compat.raw(spacket)
 
         # TODO: Logic to validate what we're receiving as a PVAccess message
         # Note that although doing the validation on receipt means we're doing
