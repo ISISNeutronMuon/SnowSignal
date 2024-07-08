@@ -99,6 +99,7 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         #     sendbytes = s.send(data)
         #     logger.debug("Broadcast packet of length %d on iface %s: %s", sendbytes, self.iface, data)
         scapy.sendrecv.sendp(spacket, self.iface)
+        logger.debug("Broadcast packet on iface %s: %s", self.iface, spacket)
 
     async def start(self) -> None:
         """Start the UDP server that listens for messages from other relays and broadcasts them"""
