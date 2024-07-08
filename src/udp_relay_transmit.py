@@ -190,7 +190,7 @@ class UDPRelayTransmit():
                     continue
 
                 print(20*'-' + 'Original' + 20*'-')
-                spacket = scapy.layers.l2.Ether(raw_packet[0])
+                spacket = scapy.layers.l2.Ether(raw_packet)
                 spacket.show()
 
                 # Send to other relays
