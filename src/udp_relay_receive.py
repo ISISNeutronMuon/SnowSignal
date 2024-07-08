@@ -78,11 +78,13 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         # spacket.show()
         data = data[0:6] + machine_readable_mac(self.mac) + data[12:]
         # logger.debug('Packet altered:   %r', data)
-        # spacket = scapy.layers.l2.Ether(data)
+        spacket = scapy.layers.l2.Ether(data)
         # print(20*'-' + ' 2 ' + 20*'-')
         # spacket.show()
-        # print(20*'-' + ' 3 ' + 20*'-')
-        # spacket.show2()
+        print(20*'-' + ' Broadcast ' + 20*'-')
+        del spacket.chksum
+        del spacket[scapy.layers.inet.UDP].chksum
+        spacket.show2()
         # data=scapy.compat.raw(spacket)
 
         # TODO: Logic to validate what we're receiving as a PVAccess message
@@ -92,10 +94,11 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         # sender as much
 
         # Finally broadcast the new packet
-        with socket.socket(socket.AF_PACKET, socket.SOCK_RAW) as s:
-            s.bind((self.iface,socket.ETH_P_ALL))
-            sendbytes = s.send(data)
-            logger.debug("Broadcast packet of length %d on iface %s: %s", sendbytes, self.iface, data)
+        # with socket.socket(socket.AF_PACKET, socket.SOCK_RAW) as s:
+        #     s.bind((self.iface,socket.ETH_P_ALL))
+        #     sendbytes = s.send(data)
+        #     logger.debug("Broadcast packet of length %d on iface %s: %s", sendbytes, self.iface, data)
+        scapy.sendrecv.sendp(spacket, self.iface)
 
     async def start(self) -> None:
         """Start the UDP server that listens for messages from other relays and broadcasts them"""
