@@ -189,9 +189,9 @@ class UDPRelayTransmit():
                     self._loop_forever = self._continue_while_loop()
                     continue
 
-                print(20*'-' + 'Original' + 20*'-')
                 spacket = scapy.layers.l2.Ether(raw_packet)
-                spacket.show()
+                spacket_dscp = spacket.show(dump=True)
+                logger.info(5*'-' + 'Original' + 5*'-' + '\n' + spacket_dscp)
 
                 # Send to other relays
                 await self._send_to_relays_packet(packet)
