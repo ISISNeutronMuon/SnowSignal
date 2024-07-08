@@ -116,7 +116,7 @@ class TestUDPRelayTransmitMethods(unittest.IsolatedAsyncioTestCase):
         transmitter = udp_relay_transmit.UDPRelayTransmit()
 
         # Create valid packet to pass all filters
-        test_packet = (self._create_broadcast_test_packet().raw, ('eth0', 5076))
+        test_packet = (self._create_broadcast_test_packet().raw, ('eth0', 2048, 0, 772, b'\x00\x00\x00\x00\x00\x00'))
         with (
             patch('asyncio.SelectorEventLoop.sock_recvfrom', return_value=test_packet),
             patch('src.udp_relay_transmit.UDPRelayTransmit._continue_while_loop', return_value=False),
