@@ -10,6 +10,7 @@ import logging
 import socket
 
 import scapy
+import scapy.packet
 import scapy.layers
 import scapy.layers.l2
 import scapy.layers.inet
@@ -100,6 +101,10 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         #     logger.debug("Broadcast packet of length %d on iface %s: %s", sendbytes, self.iface, data)
         scapy.sendrecv.sendp(spacket, self.iface)
         logger.debug("Broadcast packet on iface %s: %s", self.iface, spacket)
+        scapy.sendrecv.sendp(scapy.layers.l2.Ether(dst="ff:ff:ff:ff:ff:ff")/
+                            scapy.layers.inet.IP(dst="255.255.255.255")/
+                            scapy.layers.inet.UDP(dport=123)/
+                            scapy.packet.Raw(load="abc"), self.iface)
 
     async def start(self) -> None:
         """Start the UDP server that listens for messages from other relays and broadcasts them"""
