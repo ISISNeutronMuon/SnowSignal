@@ -109,7 +109,7 @@ def configure(arg_list: list[str] | None = None):
             loglevel = logging.DEBUG
 
     if loglevel < logging.INFO:
-        logging.basicConfig(format = '%(asctime)s - %(name)s - %(levelname)s: %(message)s',
+        logging.basicConfig(format = '%(asctime)s - %(levelname)s - %(name)s.%(funcName)s: %(message)s',
                             encoding="utf-8", level=loglevel)
     else:
         logging.basicConfig(format = '%(asctime)s - %(levelname)s: %(message)s',
