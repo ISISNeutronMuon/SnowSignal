@@ -16,7 +16,7 @@ import scapy.layers.l2
 import scapy.layers.inet
 import scapy.sendrecv
 
-from .netutils import get_macaddress_from_iface, machine_readable_mac
+from .netutils import get_broadcast_from_iface, get_localipv4_from_iface, get_macaddress_from_iface, machine_readable_mac
 
 logger = logging.getLogger(__name__)
 
@@ -103,10 +103,12 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         logger.debug("Broadcast packet on iface %s: %s", self.iface, spacket)
 
         tst_packet = ( scapy.layers.l2.Ether(dst="ff:ff:ff:ff:ff:ff")/
-                       scapy.layers.inet.IP(dst="255.255.255.255")/
-                       scapy.layers.inet.UDP(dport=123)/
+                       scapy.layers.inet.IP(dst=get_broadcast_from_iface(self.iface), flags='DF')/
+                       scapy.layers.inet.UDP(sport=25984, dport=5076)/
                        scapy.packet.Raw(load="abc")
         )
+        tst_packet[scapy.layers.l2.Ether].src = get_macaddress_from_iface(self.iface)
+        tst_packet[scapy.layers.inet.IP].src = get_localipv4_from_iface(self.iface)
         tst_packet_dscp = tst_packet.show2(dump=True)
         logger.debug(5*'-' + ' Broadcast ' + 5*'-' + '\n' + tst_packet_dscp)
         scapy.sendrecv.sendp(tst_packet, self.iface)
