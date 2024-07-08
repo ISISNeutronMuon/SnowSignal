@@ -7,18 +7,18 @@ management of the UDP packet is already done for us.
 import asyncio
 import ipaddress
 import logging
-import socket
 
-import scapy
-import scapy.packet
-import scapy.layers
-import scapy.layers.l2
-import scapy.layers.inet
+import scapy.config
 import scapy.sendrecv
 
 from .netutils import get_macaddress_from_iface, machine_readable_mac
 
 logger = logging.getLogger(__name__)
+
+scapy.config.conf.use_pcap = False
+scapy.config.conf.use_npcap = False
+scapy.config.conf.verb = 0
+scapy.config.conf.logLevel = logger.getEffectiveLevel()
 
 class UDPRelayReceive(asyncio.DatagramProtocol):
     """Listen to UDP messages from remote relays and forward them as broadcasts on the local net"""
@@ -73,10 +73,6 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
 
         # Alter the source mac address of the received packet so it originates from the local iface
         data = data[0:6] + machine_readable_mac(self.mac) + data[12:]
-        spacket = scapy.layers.l2.Ether(data)
-        del spacket.chksum
-        del spacket[scapy.layers.inet.UDP].chksum
-        spacket_dscp = spacket.show2(dump=True)
 
         # TODO: The code above does not change the IP destination address
         # If we're on a different network segment then we should switch the
@@ -95,8 +91,8 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         #     sendbytes = s.send(data)
         #     logger.debug("Broadcast packet of length %d on iface %s: %s",
         #                  sendbytes, self.iface, data)
-        scapy.sendrecv.sendp(spacket, self.iface)
-        logger.debug("Broadcast packet on iface %s: %s", self.iface, spacket)
+        scapy.sendrecv.sendp(data, self.iface)
+        logger.debug("Broadcast packet on iface %s: %s", self.iface, data)
 
     async def start(self) -> None:
         """Start the UDP server that listens for messages from other relays and broadcasts them"""
