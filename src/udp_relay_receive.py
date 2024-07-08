@@ -93,7 +93,7 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
 
         # Finally broadcast the new packet
         with socket.socket(socket.AF_PACKET, socket.SOCK_RAW) as s:
-            s.bind((self.iface,0))
+            s.bind((self.iface,socket.ETH_P_ALL))
             logger.debug("Broadcasting packet on iface %s: %s", self.iface, data)
             s.send(data)
 
