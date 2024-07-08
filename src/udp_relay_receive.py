@@ -9,14 +9,7 @@ import ipaddress
 import logging
 import socket
 
-import scapy
-import scapy.packet
-import scapy.layers
-import scapy.layers.l2
-import scapy.layers.inet
-import scapy.sendrecv
-
-from .netutils import get_broadcast_from_iface, get_localipv4_from_iface, get_macaddress_from_iface, machine_readable_mac
+from .netutils import get_macaddress_from_iface, machine_readable_mac
 
 logger = logging.getLogger(__name__)
 
@@ -72,21 +65,12 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         # TODO: Apply any filters
 
         # Alter the source mac address of the received packet so it originates from the local iface
-        # logger.debug('Datagram MAC: %s / %s', self.mac, machine_readable_mac(self.mac))
-        # logger.debug('Packet unaltered: %r', data)
-        # print(20*'-' + ' 1 ' + 20*'-')
-        # spacket = scapy.layers.l2.Ether(data)
-        # spacket.show()
         data = data[0:6] + machine_readable_mac(self.mac) + data[12:]
-        # logger.debug('Packet altered:   %r', data)
-        spacket = scapy.layers.l2.Ether(data)
-        # print(20*'-' + ' 2 ' + 20*'-')
-        # spacket.show()
-        del spacket.chksum
-        del spacket[scapy.layers.inet.UDP].chksum
-        spacket_dscp = spacket.show2(dump=True)
-        logger.debug(5*'-' + ' Broadcast ' + 5*'-' + '\n' + spacket_dscp)
-        # data=scapy.compat.raw(spacket)
+
+        # TODO: The code above does not change the IP destination address
+        # If we're on a different network segment then we should switch the
+        # broadcast IP address to use get_broadcast_from_iface(). This will
+        # then require recomputing checksums
 
         # TODO: Logic to validate what we're receiving as a PVAccess message
         # Note that although doing the validation on receipt means we're doing
@@ -95,23 +79,11 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         # sender as much
 
         # Finally broadcast the new packet
-        # with socket.socket(socket.AF_PACKET, socket.SOCK_RAW) as s:
-        #     s.bind((self.iface,socket.ETH_P_ALL))
-        #     sendbytes = s.send(data)
-        #     logger.debug("Broadcast packet of length %d on iface %s: %s", sendbytes, self.iface, data)
-        scapy.sendrecv.sendp(spacket, self.iface)
-        logger.debug("Broadcast packet on iface %s: %s", self.iface, spacket)
-
-        tst_packet = ( scapy.layers.l2.Ether(dst="ff:ff:ff:ff:ff:ff")/
-                       scapy.layers.inet.IP(dst=get_broadcast_from_iface(self.iface), flags='DF')/
-                       scapy.layers.inet.UDP(sport=25984, dport=5076)/
-                       scapy.packet.Raw(load="abc")
-        )
-        tst_packet[scapy.layers.l2.Ether].src = get_macaddress_from_iface(self.iface)
-        tst_packet[scapy.layers.inet.IP].src = get_localipv4_from_iface(self.iface)
-        tst_packet_dscp = tst_packet.show2(dump=True)
-        logger.debug(5*'-' + ' Broadcast ' + 5*'-' + '\n' + tst_packet_dscp)
-        scapy.sendrecv.sendp(tst_packet, self.iface)
+        with socket.socket(socket.AF_PACKET, socket.SOCK_RAW) as s:
+            s.bind((self.iface,socket.ETH_P_ALL))
+            sendbytes = s.send(data)
+            logger.debug("Broadcast packet of length %d on iface %s: %s",
+                         sendbytes, self.iface, data)
 
     async def start(self) -> None:
         """Start the UDP server that listens for messages from other relays and broadcasts them"""
