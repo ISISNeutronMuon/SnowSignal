@@ -106,3 +106,19 @@ def machine_readable_mac(macstr : str) -> bytes:
     """ Convert MAC with ':' or '-' separators into bytes without seperators """
     hexstring = macstr.translate({45 : '', 58:''})
     return bytes.fromhex(hexstring)
+
+def identify_pkttype(pkttype : int) -> str:
+    """ Decode packet type from socket.recvfrom"""
+    match pkttype:
+        case socket.PACKET_HOST:
+            return 'PACKET_HOST'
+        case socket.PACKET_BROADCAST:
+            return 'PACKET_BROADCAST'
+        case socket.PACKET_MULTICAST:
+            return 'PACKET_MULTICAST'
+        case socket.PACKET_OTHERHOST:
+            return 'PACKET_OTHERHOST'
+        case socket.PACKET_OUTGOING:
+            return 'PACKET_OUTGOING'
+        case _:
+            return 'UNKNOWN PACKET TYPE'

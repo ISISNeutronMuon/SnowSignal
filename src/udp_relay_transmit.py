@@ -22,7 +22,7 @@ import scapy.layers.l2
 import scapy.layers.inet
 
 from .packet import BadPacketException, EthernetProtocol, Packet
-from .netutils import get_localhost_macs, human_readable_mac, machine_readable_mac
+from .netutils import get_localhost_macs, human_readable_mac, identify_pkttype, machine_readable_mac
 
 logger = logging.getLogger(__name__)
 
@@ -89,11 +89,10 @@ class UDPRelayTransmit():
                 await loop.sock_sendto(s, msgbytes, (str(remote_relay), self.remote_port))
 
 
-    def l1filter(self, rawpacket : tuple) -> bool:
+    def l1filter(self, ifname : str) -> bool:
         """ Check the network interface is as expected"""
-        packet_iface = rawpacket[1][0]
-        if packet_iface != self._iface:
-            logger.debug('Identified as using wrong iface %s', packet_iface)
+        if ifname != self._iface:
+            logger.debug('Identified as using wrong iface %s', ifname)
             return False
 
         return True
@@ -101,9 +100,11 @@ class UDPRelayTransmit():
     def l2filter(self, packet : Packet) -> bool:
         """ Tests to perform on Level2 of packet, i.e. Ethernet  """
         # Make sure this is a broadcast and that its payload is an IP protocol message
-        if (packet.eth_dst_mac != b'\xff\xff\xff\xff\xff\xff' or
-            packet.eth_protocol == EthernetProtocol.UNKNOWN):
-            logger.debug('Not broadcast or not known ethernet protocol, packet %r', packet)
+        if (packet.eth_dst_mac != b'\xff\xff\xff\xff\xff\xff'): 
+            logger.debug('Not broadcast packet %r', packet)
+            return False
+        if (packet.eth_protocol == EthernetProtocol.UNKNOWN):
+            logger.debug('Not known ethernet protocol packet %r', packet)
             return False
 
         # Do not process packets sourced from this machine
@@ -151,17 +152,20 @@ class UDPRelayTransmit():
             while self._loop_forever:
                 loop = asyncio.get_running_loop()
                 raw_packet = await loop.sock_recvfrom(sock, 1024)
-                logger.debug('Received packet %r with data %r', raw_packet[1], raw_packet[0])
+                (ifname, proto, pkttype, hatype, addr) = raw_packet[1]
+                raw_packet = raw_packet[0]
+                logger.debug('Received on iface %s (proto %r, pktytype %r, hatype %r, addr %r) data %r',
+                             ifname, proto, identify_pkttype(pkttype), hatype, human_readable_mac(addr), raw_packet)
 
                 try:
                     # Check Level 1 physical layer, i.e. network interface
-                    if not self.l1filter(raw_packet):
+                    if not self.l1filter(ifname):
                         logger.debug('Failed l1filter')
                         self._loop_forever = self._continue_while_loop()
                         continue
 
                     # Check Level 2 data link layer, i.e. ethernet header
-                    packet = Packet(raw_packet[0])
+                    packet = Packet(raw_packet)
                     if not self.l2filter(packet):
                         logger.debug('Failed l2filter')
                         self._loop_forever = self._continue_while_loop()
