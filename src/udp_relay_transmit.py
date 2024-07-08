@@ -145,7 +145,7 @@ class UDPRelayTransmit():
         #define ETH_P_IP     0x0800          IP packets only
         with socket.socket( socket.AF_PACKET, # pylint: disable=no-member
                             socket.SOCK_RAW,
-                            socket.ntohs(0x0003)
+                            socket.ntohs(0x0800)
                           ) as sock:
             sock.setblocking(False)
 
