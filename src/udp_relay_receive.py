@@ -92,11 +92,10 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         # sender as much
 
         # Finally broadcast the new packet
-        # with socket.socket(socket.AF_PACKET, socket.SOCK_RAW) as s:
-        #     s.bind((self.iface,0))
-        #     logger.debug("Broadcasting packet: %s", data)
-        #     s.send(data)
-        scapy.sendrecv.sendp(spacket, iface=self.iface)
+        with socket.socket(socket.AF_PACKET, socket.SOCK_RAW) as s:
+            s.bind((self.iface,0))
+            logger.debug("Broadcasting packet on iface %s: %s", self.iface, data)
+            s.send(data)
 
     async def start(self) -> None:
         """Start the UDP server that listens for messages from other relays and broadcasts them"""
