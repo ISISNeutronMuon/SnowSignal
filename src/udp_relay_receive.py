@@ -13,6 +13,7 @@ import scapy
 import scapy.layers
 import scapy.layers.l2
 import scapy.layers.inet
+import scapy.sendrecv
 
 from .netutils import get_macaddress_from_iface, machine_readable_mac
 
@@ -91,11 +92,11 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         # sender as much
 
         # Finally broadcast the new packet
-        with socket.socket(socket.AF_PACKET, socket.SOCK_RAW) as s:
-            s.bind((self.iface,0))
-            logger.debug("Broadcasting packet: %s", data)
-            s.send(data)
-
+        # with socket.socket(socket.AF_PACKET, socket.SOCK_RAW) as s:
+        #     s.bind((self.iface,0))
+        #     logger.debug("Broadcasting packet: %s", data)
+        #     s.send(data)
+        scapy.sendrecv.sendp(spacket, iface=self.iface)
 
     async def start(self) -> None:
         """Start the UDP server that listens for messages from other relays and broadcasts them"""
