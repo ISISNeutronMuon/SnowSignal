@@ -49,7 +49,6 @@ class TestUDPRelayReceiveMethods(unittest.TestCase):
         receiver.datagram_received(data, ('192.168.0.1', 7124))
         socket_send_mock.assert_not_called()
 
-    @unittest.skip("Skipping due to debugging")
     @patch('socket.socket.send')
     def test_datagram_received_goodpacket(self, socket_send_mock : unittest.mock.Mock):
         """ Simulate receiving a well-formed packet """

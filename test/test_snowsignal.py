@@ -39,7 +39,6 @@ class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
 
         await snowsignal.main('--log-level=error', loop_forever=False)
 
-    @unittest.skip("Skipping due to debugging")
     @patch.object(snowsignal.UDPRelayReceive, 'datagram_received')
     async def test_integration(self,
                                receive_datagram_mock : unittest.mock.AsyncMock, 
