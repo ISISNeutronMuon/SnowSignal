@@ -17,10 +17,6 @@ import ipaddress
 import logging
 import socket
 
-import scapy
-import scapy.layers.l2
-import scapy.layers.inet
-
 from .packet import BadPacketException, EthernetProtocol, Packet
 from .netutils import get_localhost_macs, human_readable_mac, identify_pkttype, machine_readable_mac
 

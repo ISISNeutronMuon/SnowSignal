@@ -49,18 +49,18 @@ class TestUDPRelayReceiveMethods(unittest.TestCase):
         receiver.datagram_received(data, ('192.168.0.1', 7124))
         socket_send_mock.assert_not_called()
 
-    @patch('socket.socket.send')
-    def test_datagram_received_goodpacket(self, socket_send_mock : unittest.mock.Mock):
+    @patch('socket.socket.sendto')
+    def test_datagram_received_goodpacket(self, socket_sendto_mock : unittest.mock.Mock):
         """ Simulate receiving a well-formed packet """
 
         packet = self._create_test_packet()
         receiver = self._create_receiver()
         receiver.datagram_received(b'SS'+scapy.compat.raw(packet), ('192.168.0.1', 7124))
-        socket_send_mock.assert_called_once()
+        socket_sendto_mock.assert_called_once()
 
         # Make some basic checks on the packet we've pretended to send
-        raw_bytes : bytes = socket_send_mock.call_args[0][0]
-        modified_packet = scapy.layers.l2.Ether(raw_bytes)
+        raw_bytes : bytes = socket_sendto_mock.call_args[0][0]
+        modified_packet = scapy.layers.inet.IP(raw_bytes)
         pkt_payload = scapy.compat.raw(modified_packet[scapy.layers.inet.UDP].payload)
 
         self.assertEqual(pkt_payload, self._test_payload)
