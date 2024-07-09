@@ -120,7 +120,8 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
             data,
         )
 
-        # Simple verification of the received payload
+        # Simple verification of the received payload, and remove the bytes
+        # confirming that this is for us
         if data[0:2] == b'SS':
             data = data[2:]
         else:
@@ -129,18 +130,16 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
 
         # TODO: Apply any filters
 
-        # Alter the source mac address of the received packet so it originates from the local iface
-        #data = data[0:6] + machine_readable_mac(self.mac) + data[12:]
-
         # We can't use the data as is for some reason but need to recalculate the
-        # ethernet checksum
-        # Recalculate UDP checksum; we don't pass in the ethernet frame
-        data = data[:14] + self.recalculate_udp_checksum(data[14:])
+        # UDP checksum. We also remove the ethernet frame as the sendto() below
+        # will take care of that part
+        data = self.recalculate_udp_checksum(data[14:])
 
         # TODO: The code above does not change the IP source address
         # If we're on a different network segment then we should switch the
         # broadcast IP address to use get_broadcast_from_iface(). This will
-        # then require recomputing checksums
+        # then require recomputing checksums. Note: is this required? We
+        # are sending to the broadcast address in the sendto() below
 
         # TODO: Logic to validate what we're receiving as a PVAccess message
         # Note that although doing the validation on receipt means we're doing
@@ -148,15 +147,19 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         # safer to do it on receipt since it means we don't have to trust the
         # sender as much
 
+        # TODO: We should be using self.transport.sendto() in order to make
+        # this asynchronous but unfortunately that wouldn't allow us to 
+        # control the IP headers. Is there another way to resolve that?
+
         # Finally broadcast the new packet
         # It doesn't feel much simpler but we're not using fully raw sockets here
         # but instead letting Python do the work of handling the Ethernet frames
         with socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_UDP) as s:
             s.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, True)
             s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, True)
-            sendbytes = s.sendto(data[14:], (self._broadcast_addr, self.broadcast_port))
+            sendbytes = s.sendto(data, (self._broadcast_addr, self.broadcast_port))
             logger.debug("Broadcast UDP packet of length %d on iface %s: %s",
-                         sendbytes, self._iface, data[14:])
+                         sendbytes, self._iface, data)
 
 
     async def start(self) -> None:
