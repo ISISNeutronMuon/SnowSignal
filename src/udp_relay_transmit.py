@@ -33,7 +33,7 @@ class UDPRelayTransmit():
     def __init__(
         self,
         local_port: int = 5076,
-        remote_relays: list[ipaddress.ip_address] = None,
+        remote_relays: list[ipaddress.IPv4Address | ipaddress.IPv6Address] = None,
         remote_port=7124,
         config = None
     ) -> None:
@@ -100,10 +100,10 @@ class UDPRelayTransmit():
     def l2filter(self, packet : Packet) -> bool:
         """ Tests to perform on Level2 of packet, i.e. Ethernet  """
         # Make sure this is a broadcast and that its payload is an IP protocol message
-        if (packet.eth_dst_mac != b'\xff\xff\xff\xff\xff\xff'): 
+        if packet.eth_dst_mac != b'\xff\xff\xff\xff\xff\xff':
             logger.debug('Not broadcast packet %r', packet)
             return False
-        if (packet.eth_protocol == EthernetProtocol.UNKNOWN):
+        if packet.eth_protocol == EthernetProtocol.UNKNOWN:
             logger.debug('Not known ethernet protocol packet %r', packet)
             return False
 
@@ -201,7 +201,7 @@ class UDPRelayTransmit():
         """ Stop the main event loop in the start function """
         self._loop_forever = False
 
-    def set_remote_relays(self, remote_relays: list[ipaddress.ip_address]) -> None:
+    def set_remote_relays(self, remote_relays: list[ipaddress.IPv4Address | ipaddress.IPv6Address]) -> None:
         """Update the list of remote relays"""
         # We check if there's a change because although it shouldn't much
         # matter if there's a race condition from making a change we might

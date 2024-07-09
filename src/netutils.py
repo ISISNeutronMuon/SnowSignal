@@ -12,7 +12,7 @@ import psutil
 logger = logging.getLogger(__name__)
 
 
-def get_ips_from_name(name: str) -> list[ipaddress.ip_address]:
+def get_ips_from_name(name: str) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
     """Given a hostname return its IP addresses as a list"""
     local_ips_details = socket.getaddrinfo(f"{name}", 80)
 
@@ -31,7 +31,7 @@ def get_ips_from_name(name: str) -> list[ipaddress.ip_address]:
     return ips
 
 
-def get_localhost_ips() -> list[ipaddress.ip_address]:
+def get_localhost_ips() -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
     """Establish the IP address(es) of this container"""
     # Note that in a Docker Swarm environment we expect the container to
     # have at least two IP addresses, it's traditional IP address associated
