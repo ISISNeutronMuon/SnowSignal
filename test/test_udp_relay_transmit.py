@@ -113,7 +113,7 @@ class TestUDPRelayTransmitMethods(unittest.IsolatedAsyncioTestCase):
         restructuring with the _continue_while_loop() in order to stop if a 
         filter failed. 
         """
-        transmitter = udp_relay_transmit.UDPRelayTransmit()
+        transmitter = udp_relay_transmit.UDPRelayTransmit(remote_relays=['0.0.0.0'])
 
         # Create valid packet to pass all filters
         test_packet = (self._create_broadcast_test_packet().raw, ('eth0', 2048, 0, 772, b'\x00\x00\x00\x00\x00\x00'))

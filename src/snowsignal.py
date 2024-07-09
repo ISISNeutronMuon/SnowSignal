@@ -4,6 +4,8 @@ import asyncio
 import ipaddress
 import logging
 import os
+import sys
+from typing import NamedTuple, Optional, Sequence
 
 import configargparse
 from .netutils import get_localhost_ips, get_ips_from_name, get_localipv4_from_iface
@@ -25,7 +27,10 @@ def is_swarmmode() -> bool:
     return swarmmode
 
 
-def setup_remote_relays(config, local_addr, swarmmode):
+def setup_remote_relays(config,
+                        local_addr : str | ipaddress.IPv4Address | ipaddress.IPv6Address,
+                        swarmmode
+                        ) -> list[str | ipaddress.IPv4Address | ipaddress.IPv6Address]:
     """ Initial setup of the remote relays. If we're not in a Docker Swarm then
     this is largely immutable."""
 
@@ -43,7 +48,7 @@ def setup_remote_relays(config, local_addr, swarmmode):
     return remote_relays
 
 
-def discover_relays() -> list[ipaddress.ip_address]:
+def discover_relays() -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
     """Discover the other UDP Broadcast Relays in the stack"""
 
     logger.debug("Beginning relay discovery")
@@ -74,27 +79,38 @@ def discover_relays() -> list[ipaddress.ip_address]:
     return valid_ips
 
 
-def configure(arg_list: list[str] | None = None):
+class Args(NamedTuple):
+    """ This bit of weirdness allows us to use strong type hinting with Argparse
+    or equivalent tools. See https://dev.to/xowap/the-ultimate-python-main-18kn """
+    target_interface : str
+    broadcast_port : int
+    mesh_port : int
+    other_relays : list[str]
+    log_level : str
+
+def configure(argv: Optional[Sequence[str]] = None):
     """ Setup configuration for the SnowSignal service """
 
     p = configargparse.ArgParser()
-    p.add('-t', '--target-interface', env_var='TARGET_INTERFACE',
-          default='eth0', type=str,
-          help='Target network interface')
-    p.add('-b', '--broadcast-port', env_var='BDCAST_PORT',
-          default=5076, type=int,
-          help='Port on which to receive and transmit UDP broadcasts')
-    p.add('-m', '--mesh-port', env_var='MESH_PORT',
-          default=7124, type=int,
-          help='Port on which this instance will communicate with others via UDP unicast')
-    p.add('--other-relays', nargs='+', type=str, default=[],
-          help='Manually select other relays to transmit received UDP broadcasts to')
-    p.add('-l', '--log-level', env_var='LOGLEVEL',
-          choices=['debug', 'info', 'warning', 'error', 'critical'],
-          default='info',
-          help='Logging level')
+    p.add_argument('-t', '--target-interface', env_var='TARGET_INTERFACE',
+                    default='eth0', type=str,
+                    help='Target network interface')
+    p.add_argument('-b', '--broadcast-port', env_var='BDCAST_PORT',
+                    default=5076, type=int,
+                    help='Port on which to receive and transmit UDP broadcasts')
+    p.add_argument('-m', '--mesh-port', env_var='MESH_PORT',
+                    default=7124, type=int,
+                    help='Port on which this instance will communicate with others via UDP unicast')
+    p.add_argument('--other-relays', nargs='+', type=str, default=[],
+                    help='Manually select other relays to transmit received UDP broadcasts to')
+    p.add_argument('-l', '--log-level', env_var='LOGLEVEL',
+                    choices=['debug', 'info', 'warning', 'error', 'critical'],
+                    default='info',
+                    help='Logging level')
+    # Remember to add new arguments to the Args class above!
 
-    config = p.parse_args(arg_list)
+    # config = p.parse_args(argv)
+    config = Args(**p.parse_args(argv).__dict__)
 
     match config.log_level:
         case 'critical':
@@ -127,7 +143,7 @@ def configure(arg_list: list[str] | None = None):
     return config
 
 # Weird "arg_list" syntax required to support unittests
-async def main(arg_list: list[str] | None = None, loop_forever : bool = True):
+async def main(argv: Optional[Sequence[str]] = None, loop_forever : bool = True):
     """ Main function
     Load up the configuration and do some other setup. But mostly we're here
     to start two asyncio tasks. One listens for UDP broadcasts and sends them
@@ -137,7 +153,7 @@ async def main(arg_list: list[str] | None = None, loop_forever : bool = True):
     """
 
     # Configure this relay
-    config = configure(arg_list)
+    config = configure(argv)
     logger.info('Starting with configuration %s', config)
 
     # Get the local IP address
@@ -151,8 +167,8 @@ async def main(arg_list: list[str] | None = None, loop_forever : bool = True):
     remote_relays = setup_remote_relays(config, local_addr, swarmmode)
 
     # Start listening for UDP broadcasts to transmit to the other relays
-    udp_relay_transmit = UDPRelayTransmit(local_port=config.broadcast_port,
-                                          remote_relays=remote_relays,
+    udp_relay_transmit = UDPRelayTransmit(remote_relays=remote_relays,
+                                          local_port=config.broadcast_port,
                                           remote_port=config.mesh_port,
                                           config=config
                                          )
@@ -178,3 +194,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         logger.debug("Stopped by KeyboardInterrupt")
+        sys.exit(1)

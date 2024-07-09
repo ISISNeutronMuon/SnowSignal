@@ -28,8 +28,8 @@ class UDPRelayTransmit():
 
     def __init__(
         self,
+        remote_relays: list[ipaddress.IPv4Address | ipaddress.IPv6Address | str],
         local_port: int = 5076,
-        remote_relays: list[ipaddress.IPv4Address | ipaddress.IPv6Address] = None,
         remote_port=7124,
         config = None
     ) -> None:
@@ -150,8 +150,11 @@ class UDPRelayTransmit():
                 raw_packet = await loop.sock_recvfrom(sock, 1024)
                 (ifname, proto, pkttype, hatype, addr) = raw_packet[1]
                 raw_packet = raw_packet[0]
-                logger.debug('Received on iface %s (proto %r, pktytype %r, hatype %r, addr %r) data %r',
-                             ifname, proto, identify_pkttype(pkttype), hatype, human_readable_mac(addr), raw_packet)
+                logger.debug('Received on iface %s (proto %r, pktytype %r, '
+                                                   'hatype %r, addr %r) data %r',
+                             ifname, proto, identify_pkttype(pkttype),
+                             hatype, human_readable_mac(addr), raw_packet
+                             )
 
                 try:
                     # Check Level 1 physical layer, i.e. network interface
@@ -197,7 +200,9 @@ class UDPRelayTransmit():
         """ Stop the main event loop in the start function """
         self._loop_forever = False
 
-    def set_remote_relays(self, remote_relays: list[ipaddress.IPv4Address | ipaddress.IPv6Address]) -> None:
+    def set_remote_relays(self,
+                          remote_relays: list[ipaddress.IPv4Address | ipaddress.IPv6Address]
+                          ) -> None:
         """Update the list of remote relays"""
         # We check if there's a change because although it shouldn't much
         # matter if there's a race condition from making a change we might

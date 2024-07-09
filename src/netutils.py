@@ -62,11 +62,11 @@ def get_from_iface(iface : str,
     raise ResourceNotFoundException(f'Could not identify the {family}, '
                                     '{attribute} associated with interface {iface}')
 
-def get_localipv4_from_iface(iface : str):
+def get_localipv4_from_iface(iface : str) -> str:
     """ Get the IPv4 address associated with a network interface """
     return get_from_iface(iface, socket.AddressFamily.AF_INET)
 
-def get_macaddress_from_iface(iface : str):
+def get_macaddress_from_iface(iface : str) -> str:
     """ Get the MAC address associated with a network interface """
     if sys.platform != 'win32':
         return get_from_iface(iface, socket.AddressFamily.AF_PACKET)
@@ -86,7 +86,7 @@ def get_localhost_macs() -> list[str]:
 
     return macs
 
-def get_broadcast_from_iface(iface : str):
+def get_broadcast_from_iface(iface : str) -> str:
     """ Get the MAC address associated with a network interface """
     broadcast_address = get_from_iface(iface, socket.AddressFamily.AF_INET, attribute='broadcast')
 

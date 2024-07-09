@@ -12,6 +12,7 @@ import logging
 import socket
 import struct
 
+from typing import Any
 from .netutils import get_broadcast_from_iface, get_macaddress_from_iface
 
 logger = logging.getLogger(__name__)
@@ -110,7 +111,7 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
 
         return ip_packet
 
-    def datagram_received(self, data: bytes, addr : tuple[any, int]) -> None:
+    def datagram_received(self, data: bytes, addr : tuple[str | Any, int]) -> None:
         """Receive a UDP message and forward it to the remote relays"""
         logger.debug(
             "Received from %s for rebroadcast on port %i message: %r",
