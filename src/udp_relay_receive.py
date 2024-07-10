@@ -27,7 +27,7 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
                 ) -> None:
         super().__init__()
 
-        self.local_addr = local_addr
+        self.local_addr = (str(local_addr[0]), local_addr[1]) # Get typing right
         self.broadcast_port = broadcast_port
         self.transport = None  # Hasn't been initialised yet
 
@@ -148,7 +148,7 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         # sender as much
 
         # TODO: We should be using self.transport.sendto() in order to make
-        # this asynchronous but unfortunately that wouldn't allow us to 
+        # this asynchronous but unfortunately that wouldn't allow us to
         # control the IP headers. Is there another way to resolve that?
 
         # Finally broadcast the new packet

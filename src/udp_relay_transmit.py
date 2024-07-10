@@ -16,6 +16,7 @@ import asyncio
 import ipaddress
 import logging
 import socket
+from typing import Sequence
 
 from .packet import BadPacketException, EthernetProtocol, Packet
 from .netutils import get_localhost_macs, human_readable_mac, identify_pkttype, machine_readable_mac
@@ -28,7 +29,7 @@ class UDPRelayTransmit():
 
     def __init__(
         self,
-        remote_relays: list[ipaddress.IPv4Address | ipaddress.IPv6Address | str],
+        remote_relays: Sequence[ipaddress.IPv4Address | ipaddress.IPv6Address | str],
         local_port: int = 5076,
         remote_port=7124,
         config = None
