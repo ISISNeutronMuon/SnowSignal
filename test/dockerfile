@@ -1,0 +1,5 @@
+FROM debian
+
+RUN apt update && apt install -y socat tcpdump
+
+CMD ["sleep", "infinity"]

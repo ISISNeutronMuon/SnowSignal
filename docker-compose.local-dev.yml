@@ -9,7 +9,6 @@ services:
     server1:
         hostname: server1
         container_name: server1
-        image: snowsignal
         build:
             context: ./src
         command: "sleep infinity"
@@ -22,7 +21,6 @@ services:
     server2:
         hostname: server2
         container_name: server2
-        image: snowsignal
         build:
             context: ./src
         command: "sleep infinity"
@@ -31,19 +29,19 @@ services:
         networks:
             - udptest2
 
-    p4p1:
-        hostname: p4p1
-        container_name: p4p1
-        image: harbor.stfc.ac.uk/isis-accelerator-controls/internal-pvagw-tests@sha256:ea128bdf47fc740d28ed32bf7c77ad122d824d550d2b3b0057e7c29045155f9f
-        command: "sleep infinity"
+    probe1:
+        hostname: probe1
+        container_name: probe1
+        build:
+            context: ./test
         networks:
             - udptest1
 
-    p4p2:
-        hostname: p4p2
-        container_name: p4p2
-        image: harbor.stfc.ac.uk/isis-accelerator-controls/internal-pvagw-tests@sha256:ea128bdf47fc740d28ed32bf7c77ad122d824d550d2b3b0057e7c29045155f9f
-        command: "sleep infinity"
+    probe2:
+        hostname: probe2
+        container_name: probe2
+        build:
+            context: ./test
         networks:
             - udptest2
 
