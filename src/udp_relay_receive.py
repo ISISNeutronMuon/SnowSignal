@@ -13,6 +13,8 @@ import socket
 import struct
 
 from typing import Any
+
+from .configure import ConfigArgs
 from .netutils import get_broadcast_from_iface, get_macaddress_from_iface
 
 logger = logging.getLogger(__name__)
@@ -23,14 +25,14 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
     def __init__(self,
                  local_addr: tuple[ipaddress.IPv4Address | ipaddress.IPv6Address | str, int],
                  broadcast_port: int,
-                 config = None
+                 config: ConfigArgs | None = None
                 ) -> None:
         super().__init__()
 
         self.local_addr = (str(local_addr[0]), local_addr[1]) # Get typing right
         self.broadcast_port = broadcast_port
-        self.transport = None  # Hasn't been initialised yet
-        self._rebroad_sock = None
+        self.transport : asyncio.DatagramTransport
+        self._rebroad_sock : socket.socket
 
         if config:
             self._iface = config.target_interface
@@ -56,7 +58,7 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         # What does connection lost even mean for UDP?
         # Seems only necessary to stop some spurious errors on server shutdown
 
-    def recalculate_udp_checksum(self, ip_packet):
+    def recalculate_udp_checksum(self, ip_packet) -> bytes:
         """ Calculate UDP checksum, using the IP and UDP parts of the packet, 
         and change the existing packet UDP checksum with the newly calculcated
         checksum"""
@@ -182,7 +184,7 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         # One protocol instance will be created to serve all
         # client requests.
         transport, _ = await loop.create_datagram_endpoint(
-            lambda: self, #UDPRelayReceiveProtocol(broadcast_port, config=config),
+            lambda: self,
             local_addr=self.local_addr,
             allow_broadcast=True
         )

@@ -15,8 +15,8 @@ ETH_LENGTH = 14
 class EthernetProtocol(Enum):
     """ Meaning of protocol value from Ethernet frame header """
     UNKNOWN = 0         # We could classify more but we don't care!
-    IPv4 = 0x0800
-    IPv6 = 0x86DD
+    IPv4 = 0x0800 # pylint: disable=invalid-name
+    IPv6 = 0x86DD # pylint: disable=invalid-name
 
     @classmethod
     def _missing_(cls, _):
@@ -24,7 +24,6 @@ class EthernetProtocol(Enum):
 
 class BadPacketException(Exception):
     """ Basic exception type raised by Packet class """
-    pass
 
 
 @dataclasses.dataclass
@@ -36,36 +35,36 @@ class Packet():
     raw : bytes
 
     eth_protocol : EthernetProtocol = EthernetProtocol.UNKNOWN
-    eth_dst_mac  : bytes = None
-    eth_src_mac  : bytes = None
+    eth_dst_mac  : bytes | None = None
+    eth_src_mac  : bytes | None = None
 
-    _iph_length : int = dataclasses.field(default=None, repr=None)
-    ip_version  : int = None
-    ip_protocol : int = None
-    ip_chksum   : int = None
-    ip_src_addr : str = None
-    ip_dst_addr : str = None
+    _iph_length : int = dataclasses.field(default=-1, repr=False)
+    ip_version  : int | None = None
+    ip_protocol : int | None = None
+    ip_chksum   : int | None = None
+    ip_src_addr : str | None = None
+    ip_dst_addr : str | None = None
 
-    udp_src_port : int = None
-    udp_dst_port : int = None
-    udp_length   : int = None
-    udp_chksum   : int = None
+    udp_src_port : int | None = None
+    udp_dst_port : int | None = None
+    udp_length   : int | None = None
+    udp_chksum   : int | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
 
         # Always decode the Ethernet portion, but we're lazy about
         # decoding the higher protocols
         self.decode_ethernet()
 
 
-    def decode_ethernet(self):
+    def decode_ethernet(self) -> None:
         """ Interpret input bytes as a Ethernet packet """
         # https://en.wikipedia.org/wiki/Ethernet_frame#Structure
 
         logger.debug('Decoding ethernet packet %r', self.raw)
 
         try:
-            # TODO: Do we need to account for formats other than Ethernet-II or 
+            # TODO: Do we need to account for formats other than Ethernet-II or
             # VPN frames, etc.
             eth_header = self.raw[:ETH_LENGTH]
             eth = unpack('!6s6sH' , eth_header)
@@ -76,7 +75,7 @@ class Packet():
         except Exception as e:
             raise BadPacketException from e
 
-    def _decode_ipv4(self):
+    def _decode_ipv4(self) -> None:
         """ Decode IPv4 protocol header """
         # https://en.wikipedia.org/wiki/IPv4#Packet_structure
         # Take the data for the IPv4 header from the packet
@@ -102,7 +101,7 @@ class Packet():
         self.ip_src_addr = socket.inet_ntoa(iph[8])
         self.ip_dst_addr = socket.inet_ntoa(iph[9])
 
-    def _decode_ipv6(self):
+    def _decode_ipv6(self) -> None:
         """ Decode IPv6 protocol header """
         # https://en.wikipedia.org/wiki/IPv6_packet#Fixed_header
         ip_header = self.raw[ETH_LENGTH:40+ETH_LENGTH]
@@ -125,7 +124,7 @@ class Packet():
         self.ip_src_addr = iph[4]
         self.ip_dst_addr = iph[5]
 
-    def decode_ip(self):
+    def decode_ip(self) -> None:
         """ Decode the IP Protocol header """
         try:
             match self.eth_protocol:
@@ -145,7 +144,7 @@ class Packet():
         except Exception as e:
             raise BadPacketException from e
 
-    def decode_udp(self):
+    def decode_udp(self) -> None:
         """ Decode UDP header information """
         try:
             # Get the UDP Header
@@ -171,6 +170,6 @@ class Packet():
         except Exception as e:
             raise BadPacketException from e
 
-    def change_ethernet_source(self, newmac):
+    def change_ethernet_source(self, newmac) -> None:
         """ Change packet Ethernet source to a new MAC address """
         self.raw = self.raw[0:6] + newmac + self.raw[12:]

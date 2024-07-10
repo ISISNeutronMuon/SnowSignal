@@ -1,84 +1,19 @@
-""" Experimental UDP Broadcast Relay for PVAccess """
+""" SnowSignal - UDP Broadcast Relay """
 
 import asyncio
 import ipaddress
 import logging
 import os
 import sys
-from typing import NamedTuple, Optional, Sequence
+from typing import Sequence
 
-import configargparse
+from .configure import configure, ConfigArgs
 from .netutils import get_localhost_ips, get_ips_from_name, get_localipv4_from_iface
 from .udp_relay_receive import UDPRelayReceive
 from .udp_relay_transmit import UDPRelayTransmit
 
 # Logging and configuration of Scapy
 logger = logging.getLogger()
-
-class Args(NamedTuple):
-    """ This bit of weirdness allows us to use strong type hinting with Argparse
-    or equivalent tools. See https://dev.to/xowap/the-ultimate-python-main-18kn """
-    target_interface : str
-    broadcast_port : int
-    mesh_port : int
-    other_relays : list[str]
-    log_level : str
-
-def configure(argv: Optional[Sequence[str]] = None):
-    """ Setup configuration for the SnowSignal service """
-
-    p = configargparse.ArgParser()
-    # Remember to add new arguments to the Args class above!
-    p.add_argument('-t', '--target-interface', env_var='TARGET_INTERFACE',
-                    default='eth0', type=str,
-                    help='Target network interface')
-    p.add_argument('-b', '--broadcast-port', env_var='BDCAST_PORT',
-                    default=5076, type=int,
-                    help='Port on which to receive and transmit UDP broadcasts')
-    p.add_argument('-m', '--mesh-port', env_var='MESH_PORT',
-                    default=7124, type=int,
-                    help='Port on which this instance will communicate with others via UDP unicast')
-    p.add_argument('--other-relays', nargs='+', type=str, default=[],
-                    help='Manually select other relays to transmit received UDP broadcasts to')
-    p.add_argument('-ll', '--log-level', env_var='LOGLEVEL',
-                    choices=['debug', 'info', 'warning', 'error', 'critical'],
-                    default='info',
-                    help='Logging level')
-    # Remember to add new arguments to the Args class above!
-
-    # config = p.parse_args(argv)
-    config = Args(**p.parse_args(argv).__dict__)
-
-    match config.log_level:
-        case 'critical':
-            loglevel = logging.CRITICAL
-        case 'error':
-            loglevel = logging.ERROR
-        case 'warning':
-            loglevel = logging.WARNING
-        case 'info':
-            loglevel = logging.INFO
-        case 'debug':
-            loglevel = logging.DEBUG
-
-    if loglevel < logging.INFO:
-        logging.basicConfig(format = '%(asctime)s - %(levelname)s - '
-                            '%(name)s.%(funcName)s: %(message)s',
-                            encoding="utf-8", level=loglevel)
-    else:
-        logging.basicConfig(format = '%(asctime)s - %(levelname)s: %(message)s',
-                            encoding="utf-8", level=loglevel)
-
-    if config.broadcast_port == config.mesh_port:
-        # Can't use the same port for two different purposes
-        # Later, if we allow the receive relay and transmit relay on different
-        # ports we may need to revisit this error
-        logger.error('Broadcast port (%i) and mesh port (%i) may not be the same',
-                     config.broadcast_port, config.mesh_port)
-        raise ValueError(f'Broadcast port ({config.broadcast_port}) and '
-                         f'mesh port ({config.mesh_port}) may not be the same')
-
-    return config
 
 
 def is_swarmmode() -> bool:
@@ -93,7 +28,7 @@ def is_swarmmode() -> bool:
     return swarmmode
 
 
-def setup_remote_relays(config : Args,
+def setup_remote_relays(config : ConfigArgs,
                         local_addr : str | ipaddress.IPv4Address | ipaddress.IPv6Address,
                         swarmmode : bool
                         ) -> Sequence[str | ipaddress.IPv4Address | ipaddress.IPv6Address]:
@@ -146,7 +81,7 @@ def discover_relays() -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
 
 
 # Weird "argv" syntax required to support unittests
-async def main(argv: Optional[Sequence[str]] = None, loop_forever : bool = True):
+async def main(argv: Sequence[str] | None = None, loop_forever : bool = True):
     """ Main function
     Load up the configuration and do some other setup. But mostly we're here
     to start two asyncio tasks. One listens for UDP broadcasts and sends them

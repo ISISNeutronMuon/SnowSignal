@@ -18,6 +18,8 @@ import logging
 import socket
 from typing import Sequence
 
+from .configure import ConfigArgs
+
 from .packet import BadPacketException, EthernetProtocol, Packet
 from .netutils import get_localhost_macs, human_readable_mac, identify_pkttype, machine_readable_mac
 
@@ -31,8 +33,8 @@ class UDPRelayTransmit():
         self,
         remote_relays: Sequence[ipaddress.IPv4Address | ipaddress.IPv6Address | str],
         local_port: int = 5076,
-        remote_port=7124,
-        config = None
+        remote_port: int = 7124,
+        config : ConfigArgs | None = None
     ) -> None:
         self._loop_forever = True
 
