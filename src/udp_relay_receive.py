@@ -30,6 +30,7 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         self.local_addr = (str(local_addr[0]), local_addr[1]) # Get typing right
         self.broadcast_port = broadcast_port
         self.transport = None  # Hasn't been initialised yet
+        self._rebroad_sock = None
 
         if config:
             self._iface = config.target_interface
@@ -43,6 +44,7 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         # interface is immutable
         self._broadcast_addr = get_broadcast_from_iface(self._iface)
 
+        # A way to manage the forever loop for unit testing and other purposes
         self._loop_forever = True
 
     def connection_made(self, transport: asyncio.DatagramTransport) -> None:
@@ -154,12 +156,9 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         # Finally broadcast the new packet
         # It doesn't feel much simpler but we're not using fully raw sockets here
         # but instead letting Python do the work of handling the Ethernet frames
-        with socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_UDP) as s:
-            s.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, True)
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, True)
-            sendbytes = s.sendto(data, (self._broadcast_addr, self.broadcast_port))
-            logger.debug("Broadcast UDP packet of length %d on iface %s: %s",
-                         sendbytes, self._iface, data)
+        sendbytes = self._rebroad_sock.sendto(data, (self._broadcast_addr, self.broadcast_port))
+        logger.debug("Broadcast UDP packet of length %d on iface %s: %s",
+                        sendbytes, self._iface, data)
 
 
     async def start(self) -> None:
@@ -170,6 +169,11 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
             self.local_addr,
             self.broadcast_port,
         )
+
+        # Open the socket we'll rebroadcast messages on
+        self._rebroad_sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_UDP)
+        self._rebroad_sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, True)
+        self._rebroad_sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, True)
 
         # Get a reference to the event loop as we plan to use
         # low-level APIs.
@@ -189,3 +193,4 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
                 await asyncio.sleep(1)
         finally:
             transport.close()
+            self._rebroad_sock.close()
