@@ -1,5 +1,6 @@
 """ Tests for the udp_relay_receive file """
 
+import socket
 import sys
 import unittest
 from unittest.mock import patch
@@ -52,17 +53,17 @@ class TestUDPRelayReceiveMethods(unittest.TestCase):
         receiver.datagram_received(data, ('192.168.0.1', 7124))
         socket_send_mock.assert_not_called()
 
-    @patch('socket.socket.sendto')
-    def test_datagram_received_goodpacket(self, socket_sendto_mock : unittest.mock.Mock):
+    def test_datagram_received_goodpacket(self):
         """ Simulate receiving a well-formed packet """
 
         packet = self._create_test_packet()
         receiver = self._create_receiver()
+        receiver._rebroad_sock = unittest.mock.MagicMock(socket.socket) # pylint: disable=protected-access
         receiver.datagram_received(b'SS'+scapy.compat.raw(packet), ('192.168.0.1', 7124))
-        socket_sendto_mock.assert_called_once()
+        receiver._rebroad_sock.sendto.assert_called_once() # pylint: disable=protected-access
 
         # Make some basic checks on the packet we've pretended to send
-        raw_bytes : bytes = socket_sendto_mock.call_args[0][0]
+        raw_bytes : bytes = receiver._rebroad_sock.sendto.call_args[0][0] # pylint: disable=protected-access
         modified_packet = scapy.layers.inet.IP(raw_bytes)
         pkt_payload = scapy.compat.raw(modified_packet[scapy.layers.inet.UDP].payload)
 
