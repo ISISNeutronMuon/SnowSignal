@@ -9,24 +9,48 @@ SnowSignal is designed to create a mesh network between instances of the program
 
 ## Usage
 ### General
+Command line and environment variable options. Environment variables are defined in square brackets like `[env var: THIS]`. In general, command-line values override environment variables which override defaults.
 ``` 
 usage: snowsignal.py [-h] [-t TARGET_INTERFACE] [-b BROADCAST_PORT] [-m MESH_PORT]
-                     [--rebroadcast-mode {packet,payload}] [--other-relays OTHER_RELAYS [OTHER_RELAYS ...]]
+                     [--other-relays OTHER_RELAYS [OTHER_RELAYS ...]]
                      [-l {debug,info,warning,error,critical}]
-
-options:
-  -h, --help            show this help message and exit
+```
+#### Target Interface
+```
   -t TARGET_INTERFACE, --target-interface TARGET_INTERFACE
-                        Target network interface
+                        Target network interface [env var: TARGET_INTERFACE]
+```
+At this time SnowSignal only supports using a single network interface for receiving UDP broadcasts, sending to other relays, and rebroadcasting UDP messages received from other relays.
+Defaults to `eth0`.
+
+#### Broadcast Port
+```
   -b BROADCAST_PORT, --broadcast-port BROADCAST_PORT
-                        Port on which to receive and transmit UDP broadcasts
+                        Port on which to receive and transmit UDP broadcasts [env var: BDCAST_PORT]
+```
+SnowSignal listens for UDP broadcasts on a single port and rebroadcasts messages received from other SnowSignal instances on the same port. Defaults to port 5076.
+
+#### Mesh Port
+```
   -m MESH_PORT, --mesh-port MESH_PORT
-                        Port on which this instance will communicate with others via UDP unicast
+                        Port on which this instance will communicate with others via UDP unicast [env var:
+                        MESH_PORT]
+```
+UDP port on which to listen for messages from other SnowSignal instances. Defaults to port 7124.
+
+#### Other relays
+```
   --other-relays OTHER_RELAYS [OTHER_RELAYS ...]
                         Manually select other relays to transmit received UDP broadcasts to
-  -l {debug,info,warning,error,critical}, --log-level {debug,info,warning,error,critical}
-                        Logging level
 ```
+Manually set a list of other SnowSignal instances with which to communicate. In Docker Swarm SnowSingal is capable of auto-discovering instances if the `SERVICENAME` environment variable is set, see "Mesh Network" below. If no other relays are defined via any of these means then SnowSignal will communicate with itself for testing purposes. Default is an empty list.
+
+#### Log Level
+```
+  -ll {debug,info,warning,error,critical}, --log-level {debug,info,warning,error,critical}
+                        Logging level [env var: LOGLEVEL]
+```
+Set the logging level.
 
 ### Docker Swarm
 If run in a Docker Swarm then the default configuration should work well with PVAccess. 
