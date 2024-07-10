@@ -32,7 +32,7 @@ tcpdump -e -i eth0 udp and broadcast -vv -X
 will produce a dump of a UDP broadcast packet received on network `eth0`, including the ethernet frame (`-e`), much extra detail if interpretable (`-vv`), and both hex and ASCII of the packet data (`-X`).
 
 ## Demo
-This demo uses Windows Terminal in a four panel setup. 
+This demo uses [Windows Terminal in a four pane](https://learn.microsoft.com/en-us/windows/terminal/panes) setup. 
 ![Example of testing SnowSignal using docker-compose.local-dev.yml containers](local_dev_example.gif)
 
 `socat` and `tcpdump` commands as detailed above are run in containers probe1 and probe2 respectively.
