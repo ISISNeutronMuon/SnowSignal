@@ -5,12 +5,14 @@ import logging
 import socket
 import sys
 
-from typing import Union
-
 import psutil
 
 logger = logging.getLogger(__name__)
 
+# Explanation for repeated use of `pyl1nt: disable=no-member` in
+# this file: a "bug" in PyLint means that it incorrectly diagnoses
+# socket.AddressFamily as an error, since it believes that socket
+# has no attribute AddressFamily. So we suppress this incorrect error
 
 def get_ips_from_name(name: str) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
     """Given a hostname return its IP addresses as a list"""
@@ -19,7 +21,7 @@ def get_ips_from_name(name: str) -> list[ipaddress.IPv4Address | ipaddress.IPv6A
     ips = []
     for local_ip_detail in local_ips_details:
         addfamily = local_ip_detail[0]
-        if addfamily in (socket.AddressFamily.AF_INET6, socket.AddressFamily.AF_INET):
+        if addfamily in (socket.AddressFamily.AF_INET6, socket.AddressFamily.AF_INET):  # pylint: disable=no-member
             ip = ipaddress.ip_address(local_ip_detail[4][0])
             ips.append(ip)
         else:
@@ -50,7 +52,7 @@ class ResourceNotFoundException(OSError):
     """ Indicate an expected hardware resource could not be found """
 
 def get_from_iface(iface : str,
-                   family : Union[socket.AddressFamily, psutil.AF_LINK],
+                   family : socket.AddressFamily | int,  # pylint: disable=no-member
                    attribute : str = 'address'
                    ):
     """ Get the IP address associated with a network interface """
@@ -64,12 +66,12 @@ def get_from_iface(iface : str,
 
 def get_localipv4_from_iface(iface : str) -> str:
     """ Get the IPv4 address associated with a network interface """
-    return get_from_iface(iface, socket.AddressFamily.AF_INET)
+    return get_from_iface(iface, socket.AddressFamily.AF_INET)  # pylint: disable=no-member
 
 def get_macaddress_from_iface(iface : str) -> str:
     """ Get the MAC address associated with a network interface """
     if sys.platform != 'win32':
-        return get_from_iface(iface, socket.AddressFamily.AF_PACKET)
+        return get_from_iface(iface, socket.AddressFamily.AF_PACKET)  # pylint: disable=no-member
     else:
         return get_from_iface(iface, psutil.AF_LINK)
 
@@ -88,7 +90,7 @@ def get_localhost_macs() -> list[str]:
 
 def get_broadcast_from_iface(iface : str) -> str:
     """ Get the MAC address associated with a network interface """
-    broadcast_address = get_from_iface(iface, socket.AddressFamily.AF_INET, attribute='broadcast')
+    broadcast_address = get_from_iface(iface, socket.AddressFamily.AF_INET, attribute='broadcast')  # pylint: disable=no-member
 
     # If we don't get a valid broadcast address then attempt to substitute one
     if not broadcast_address:
