@@ -96,6 +96,9 @@ A docker swarm network may be created which crosses transparently between the no
 
 For PVAccess this means that search requests are isolated to individual nodes in the swarm. A pvget to a server-container on the same node will succeed, while one to a server-container on another node will fail. (Assuming that PVA Gateway or `EPICS_PVA_NAME_SERVERS` is not used to overcome this limitation.)
 
+## For Developers
+See details on using the [local dev setup](docs/local_dev.md) as well as discussion below.
+
 ## Implementation
 SnowSignal is implemented in Python using base Python except for the libraries [ConfigArgParse](https://pypi.org/project/ConfigArgParse/) and [psutil](https://pypi.org/project/psutil/). The [scapy](https://scapy.readthedocs.io/en/latest/) library is used in integration and unit tests to create, send, receive, and manipulate UDP packets. 
 
