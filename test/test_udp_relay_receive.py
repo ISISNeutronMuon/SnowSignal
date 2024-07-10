@@ -13,6 +13,8 @@ import scapy.packet
 from src import udp_relay_receive
 
 class TestUDPRelayReceiveMethods(unittest.TestCase):
+    """ Test the udp_relay_receive class method functions """
+
     # These tests doesn't work on Windows because in scapy.utils.mac2str
     # the line should be
     #     return b"".join(chb(int(x, 16)) for x in re.split(':|-', plain_str(mac)))
@@ -22,6 +24,7 @@ class TestUDPRelayReceiveMethods(unittest.TestCase):
 
     def _create_receiver(self) -> udp_relay_receive.UDPRelayReceive:
         class Config:
+            """ Very partial mock of argparser / snowsignal's config interface"""
             def __init__(self):
                 self.target_interface = 'eth0'
 

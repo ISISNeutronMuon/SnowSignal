@@ -139,7 +139,7 @@ class UDPRelayTransmit():
         """ Monitor for UDP broadcasts on the specified port """
         #create a AF_PACKET type raw socket (thats basically packet level)
         #define ETH_P_ALL    0x0003          /* Every packet (be careful!!!) */
-        #define ETH_P_IP     0x0800          IP packets only
+        #define ETH_P_IP     0x0800          IP packets only; I believe this is IPv4
         with socket.socket( socket.AF_PACKET, # pylint: disable=no-member
                             socket.SOCK_RAW,
                             socket.ntohs(0x0800)
@@ -153,8 +153,8 @@ class UDPRelayTransmit():
                 raw_packet = raw_packet[0]
                 logger.debug('Received on iface %s (proto %r, pktytype %r, '
                                                    'hatype %r, addr %r) data %r',
-                             ifname, proto, identify_pkttype(pkttype),
-                             hatype, human_readable_mac(addr), raw_packet
+                             ifname, socket.ntohs(proto), identify_pkttype(pkttype),
+                             socket.ntohs(hatype), human_readable_mac(addr), raw_packet
                              )
 
                 try:
