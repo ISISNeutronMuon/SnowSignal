@@ -1,3 +1,5 @@
+image: python:latest
+
 stages:
   - format-lint
   - test
@@ -6,6 +8,7 @@ stages:
 
 .before_script_template: &before_script_template
   before_script: 
+    - echo $NAME
     - python -m pip install --upgrade pip
     - pip install -r src/requirements.txt
     - pip install -r test/requirements.txt
@@ -48,8 +51,8 @@ unit-test:
         path: ./coverage.xml
 
 Run unittests:
+  <<: *before_script_template
   stage: test
-  image: python:latest
   script:
     - python -m coverage run --source=. -m unittest discover
     - coverage report -m
@@ -63,6 +66,7 @@ Run unittests:
         path: ./coverage.xml
 
 Rebuild Image: 
+  <<: *before_script_template
   stage: build
   when: on_success
   image: docker
