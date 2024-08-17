@@ -8,8 +8,7 @@ stages:
   before_script: 
     - echo $NAME
     - python -m pip install --upgrade pip
-    - pip install -r src/requirements.txt
-    - pip install -r test/requirements.txt
+    - pip install [.test]
     - python -V
 
 format:
@@ -24,7 +23,7 @@ lint:
   image: python:latest
   stage: format-lint
   script:
-    - flake8 --ignore E501,W503 ./src
+    - flake8 ./src
 
 .test_job_template: &test_job_template
   <<: *before_script_template
@@ -37,9 +36,7 @@ lint:
 Older verisons unittests (Optional):
   <<: *test_job_template
   script:
-    - python -m coverage run --source=. -m unittest discover
-    - coverage report -m
-    - coverage xml
+    - coverage tests/unit/
   rules:
     - allow_failure: true # Only the later tests must succeed
   coverage: '/TOTAL.*\s+(\d+\%)/'
