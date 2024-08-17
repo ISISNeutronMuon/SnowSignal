@@ -8,7 +8,7 @@ stages:
   before_script: 
     - echo $NAME
     - python -m pip install --upgrade pip
-    - pip install [.test]
+    - pip install .[test]
     - python -V
 
 format:
@@ -36,7 +36,9 @@ lint:
 Older verisons unittests (Optional):
   <<: *test_job_template
   script:
-    - coverage tests/unit/
+    - python -m coverage run --source=. -m unittest discover tests/
+    - coverage report -m
+    - coverage xml
   rules:
     - allow_failure: true # Only the later tests must succeed
   coverage: '/TOTAL.*\s+(\d+\%)/'
@@ -52,7 +54,7 @@ Run unittests:
   image: python:latest
   stage: test
   script:
-    - python -m coverage run --source=. -m unittest discover
+    - python -m coverage run --source=. -m unittest discover tests/
     - coverage report -m
     - coverage xml
   coverage: '/TOTAL.*\s+(\d+\%)/'

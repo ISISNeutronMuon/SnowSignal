@@ -30,11 +30,11 @@ Repository = "https://gitlab.stfc.ac.uk/isis-accelerator-controls/playground/iva
 
 [project.optional-dependencies]
 test = [
-  "scapy==2.*",
+  "scapy~=2.0",
   "black>=24.4",
-  "coverage>=7.6",
   "flake8>=7.1",
   "Flake8-pyproject>=1.2",
+  "coverage>=7.6"
 ]
 
 [build-system]
@@ -55,9 +55,8 @@ color = true
 diff = true
 
 [tool.coverage.run]
-command_line = "-m unittest discover"
 source = ["."]
 omit = ["./tests/locust/"]
-show_missing = true
 
 [tool.coverage.xml]
+output = "coverage.xml"
