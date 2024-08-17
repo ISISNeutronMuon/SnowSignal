@@ -1,17 +1,58 @@
 stages:
+  - format-lint
   - test
   - build
   - deploy
+
+.before_script_template: &before_script_template
+  before_script: 
+    - python -m pip install --upgrade pip
+    - pip install -r src/requirements.txt
+    - pip install -r test/requirements.txt
+    - python -V
+
+format:
+  <<: *before_script_template
+  stage: format-lint
+  script:
+    - black --line-length 120 --check --diff --color ./src
+
+lint:
+  <<: *before_script_template
+  stage: format-lint
+  script:
+    - flake8 --ignore E501,W503 ./src
+
+.test_job_template: &test_job_template
+  <<: *before_script_template
+  stage: test
+  image: "python:$VERSION"
+  parallel:
+    matrix:
+      - VERSION: ['3.10', '3.11']
+
+unit-test:
+  <<: *test_job_template
+  script:
+    - python -m coverage run --source=. -m pytest tests/unit/
+    - coverage report -m
+    - coverage xml
+  rules:
+    - allow_failure: true # Only the later tests must succeed
+  coverage: '/TOTAL.*\s+(\d+\%)/'
+  artifacts:
+    when: always
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: ./coverage.xml
 
 Run unittests:
   stage: test
   image: python:latest
   script:
-    - python --version
-    - pip install -r src/requirements.txt
-    - pip install -r test/requirements.txt
     - python -m coverage run --source=. -m unittest discover
-    - coverage report
+    - coverage report -m
     - coverage xml
   coverage: '/TOTAL.*\s+(\d+\%)/'
   artifacts:
