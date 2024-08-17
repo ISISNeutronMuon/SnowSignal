@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 # socket.AddressFamily as an error, since it believes that socket
 # has no attribute AddressFamily. So we suppress this incorrect error
 
+
 def get_ips_from_name(name: str) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
     """Given a hostname return its IP addresses as a list"""
     local_ips_details = socket.getaddrinfo(f"{name}", 80)
@@ -48,35 +49,40 @@ def get_localhost_ips() -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
 
     return local_ips
 
-class ResourceNotFoundException(OSError):
-    """ Indicate an expected hardware resource could not be found """
 
-def get_from_iface(iface : str,
-                   family : socket.AddressFamily | int,  # pylint: disable=no-member
-                   attribute : str = 'address'
-                   ):
-    """ Get the IP address associated with a network interface """
+class ResourceNotFoundException(OSError):
+    """Indicate an expected hardware resource could not be found"""
+
+
+def get_from_iface(
+    iface: str, family: socket.AddressFamily | int, attribute: str = "address"  # pylint: disable=no-member
+):
+    """Get the IP address associated with a network interface"""
     snicaddrs = psutil.net_if_addrs()[iface]
     for snicaddr in snicaddrs:
         if snicaddr.family == family:
             return getattr(snicaddr, attribute)
 
-    raise ResourceNotFoundException(f'Could not identify the {family}, '
-                                    '{attribute} associated with interface {iface}')
+    raise ResourceNotFoundException(
+        f"Could not identify the {family}, " "{attribute} associated with interface {iface}"
+    )
 
-def get_localipv4_from_iface(iface : str) -> str:
-    """ Get the IPv4 address associated with a network interface """
+
+def get_localipv4_from_iface(iface: str) -> str:
+    """Get the IPv4 address associated with a network interface"""
     return get_from_iface(iface, socket.AddressFamily.AF_INET)  # pylint: disable=no-member
 
-def get_macaddress_from_iface(iface : str) -> str:
-    """ Get the MAC address associated with a network interface """
-    if sys.platform != 'win32':
+
+def get_macaddress_from_iface(iface: str) -> str:
+    """Get the MAC address associated with a network interface"""
+    if sys.platform != "win32":
         return get_from_iface(iface, socket.AddressFamily.AF_PACKET)  # pylint: disable=no-member
     else:
         return get_from_iface(iface, psutil.AF_LINK)
 
+
 def get_localhost_macs() -> list[str]:
-    """ Get all the MAC addresses of local network interfaces """
+    """Get all the MAC addresses of local network interfaces"""
     macs = []
 
     ifaces = psutil.net_if_addrs()
@@ -88,39 +94,44 @@ def get_localhost_macs() -> list[str]:
 
     return macs
 
-def get_broadcast_from_iface(iface : str) -> str:
-    """ Get the MAC address associated with a network interface """
-    broadcast_address = get_from_iface(iface, socket.AddressFamily.AF_INET, attribute='broadcast')  # pylint: disable=no-member
+
+def get_broadcast_from_iface(iface: str) -> str:
+    """Get the MAC address associated with a network interface"""
+    broadcast_address = get_from_iface(
+        iface, socket.AddressFamily.AF_INET, attribute="broadcast"
+    )  # pylint: disable=no-member
 
     # If we don't get a valid broadcast address then attempt to substitute one
     if not broadcast_address:
-        return '255.255.255.255'
+        return "255.255.255.255"
 
     return broadcast_address
 
 
-def human_readable_mac(macbytes : bytes, separator : str = ':') -> str:
-    """ Convert MAC in bytes into human-readable string with separators """
+def human_readable_mac(macbytes: bytes, separator: str = ":") -> str:
+    """Convert MAC in bytes into human-readable string with separators"""
     unseparated_mac_str = macbytes.hex()
-    return separator.join([i+j for i,j in zip(unseparated_mac_str[::2], unseparated_mac_str[1::2])])
+    return separator.join([i + j for i, j in zip(unseparated_mac_str[::2], unseparated_mac_str[1::2])])
 
-def machine_readable_mac(macstr : str) -> bytes:
-    """ Convert MAC with ':' or '-' separators into bytes without seperators """
-    hexstring = macstr.translate({45 : '', 58:''})
+
+def machine_readable_mac(macstr: str) -> bytes:
+    """Convert MAC with ':' or '-' separators into bytes without seperators"""
+    hexstring = macstr.translate({45: "", 58: ""})
     return bytes.fromhex(hexstring)
 
-def identify_pkttype(pkttype : int) -> str:
-    """ Decode packet type from socket.recvfrom"""
+
+def identify_pkttype(pkttype: int) -> str:
+    """Decode packet type from socket.recvfrom"""
     match pkttype:
         case socket.PACKET_HOST:
-            return 'PACKET_HOST'
+            return "PACKET_HOST"
         case socket.PACKET_BROADCAST:
-            return 'PACKET_BROADCAST'
+            return "PACKET_BROADCAST"
         case socket.PACKET_MULTICAST:
-            return 'PACKET_MULTICAST'
+            return "PACKET_MULTICAST"
         case socket.PACKET_OTHERHOST:
-            return 'PACKET_OTHERHOST'
+            return "PACKET_OTHERHOST"
         case socket.PACKET_OUTGOING:
-            return 'PACKET_OUTGOING'
+            return "PACKET_OUTGOING"
         case _:
-            return 'UNKNOWN PACKET TYPE'
+            return "UNKNOWN PACKET TYPE"

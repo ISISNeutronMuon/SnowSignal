@@ -1,4 +1,4 @@
-""" Listen for UDP broadcasts on a port and transmit packet information to other relays 
+""" Listen for UDP broadcasts on a port and transmit packet information to other relays
 
 This uses the standard asyncio.DatagramProtocol base class so most of the initial
 management of the UDP packet is already done for us.
@@ -19,25 +19,27 @@ from .netutils import get_broadcast_from_iface, get_macaddress_from_iface
 
 logger = logging.getLogger(__name__)
 
+
 class UDPRelayReceive(asyncio.DatagramProtocol):
     """Listen to UDP messages from remote relays and forward them as broadcasts on the local net"""
 
-    def __init__(self,
-                 local_addr: tuple[ipaddress.IPv4Address | ipaddress.IPv6Address | str, int],
-                 broadcast_port: int,
-                 config: ConfigArgs | None = None
-                ) -> None:
+    def __init__(
+        self,
+        local_addr: tuple[ipaddress.IPv4Address | ipaddress.IPv6Address | str, int],
+        broadcast_port: int,
+        config: ConfigArgs | None = None,
+    ) -> None:
         super().__init__()
 
-        self.local_addr = (str(local_addr[0]), local_addr[1]) # Get typing right
+        self.local_addr = (str(local_addr[0]), local_addr[1])  # Get typing right
         self.broadcast_port = broadcast_port
-        self.transport : asyncio.DatagramTransport
-        self._rebroad_sock : socket.socket
+        self.transport: asyncio.DatagramTransport
+        self._rebroad_sock: socket.socket
 
         if config:
             self._iface = config.target_interface
         else:
-            self._iface = 'eth0'
+            self._iface = "eth0"
 
         # Assume the MAC address is immutable
         self._mac = get_macaddress_from_iface(self._iface)
@@ -53,13 +55,13 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         """Handle a connection being established"""
         self.transport = transport
 
-    def connection_lost(self, exc : Exception | None) -> None:
+    def connection_lost(self, exc: Exception | None) -> None:
         """Handle a connection being lost"""
         # What does connection lost even mean for UDP?
         # Seems only necessary to stop some spurious errors on server shutdown
 
     def recalculate_udp_checksum(self, ip_packet) -> bytes:
-        """ Calculate UDP checksum, using the IP and UDP parts of the packet, 
+        """Calculate UDP checksum, using the IP and UDP parts of the packet,
         and change the existing packet UDP checksum with the newly calculcated
         checksum"""
 
@@ -83,9 +85,8 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         # We need information from the IP header to construct the pseudo-header
         # needed in turn to calculate the UDP checksum. Specifically we need the
         # source and destination IP addresses
-        ip_header = struct.unpack('!BBHHHBBH4s4s', ip_packet[0:20])
-        pseudo_header = struct.pack('!4s4sHH', ip_header[8], ip_header[9],
-                                               socket.IPPROTO_UDP, len(pseudo_packet))
+        ip_header = struct.unpack("!BBHHHBBH4s4s", ip_packet[0:20])
+        pseudo_header = struct.pack("!4s4sHH", ip_header[8], ip_header[9], socket.IPPROTO_UDP, len(pseudo_packet))
 
         # Combine the pseudo header and pseudo packet to form a complete pseudo packet
         # that we'll perform the checksum calculations on
@@ -98,24 +99,24 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
 
         # The checksum calculation proceeds by summing the one’s complement where
         # all binary 0s become 1s, of all 16-bit words in these components.
-        onecompsum  = sum(array.array("H", checksum_packet))
-        onecompsum  = (onecompsum >> 16) + (onecompsum & 0xffff)
+        onecompsum = sum(array.array("H", checksum_packet))
+        onecompsum = (onecompsum >> 16) + (onecompsum & 0xFFFF)
         onecompsum += onecompsum >> 16
-        onecompsum  = ~onecompsum   # Finally invert the bits
+        onecompsum = ~onecompsum  # Finally invert the bits
 
         # Test endianness and do some magic if we're on a little endian system
         if struct.pack("H", 1) != b"\x00\x01":
-            onecompsum = ((onecompsum >> 8) & 0xff) | onecompsum << 8
+            onecompsum = ((onecompsum >> 8) & 0xFF) | onecompsum << 8
 
         # If checksum is 0 change it to 0xFFFF to signal it has been calculated
-        udp_checksum = onecompsum & 0xffff
+        udp_checksum = onecompsum & 0xFFFF
 
         # Insert the calculated checksum into the IP + UDP packet
-        ip_packet = ip_packet[:26] + udp_checksum.to_bytes(2,'big') + ip_packet[28:]
+        ip_packet = ip_packet[:26] + udp_checksum.to_bytes(2, "big") + ip_packet[28:]
 
         return ip_packet
 
-    def datagram_received(self, data: bytes, addr : tuple[str | Any, int]) -> None:
+    def datagram_received(self, data: bytes, addr: tuple[str | Any, int]) -> None:
         """Receive a UDP message and forward it to the remote relays"""
         logger.debug(
             "Received from %s for rebroadcast on port %i message: %r",
@@ -126,7 +127,7 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
 
         # Simple verification of the received payload, and remove the bytes
         # confirming that this is for us
-        if data[0:2] == b'SS':
+        if data[0:2] == b"SS":
             data = data[2:]
         else:
             logger.debug("Malformed packet received")
@@ -159,9 +160,7 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         # It doesn't feel much simpler but we're not using fully raw sockets here
         # but instead letting Python do the work of handling the Ethernet frames
         sendbytes = self._rebroad_sock.sendto(data, (self._broadcast_addr, self.broadcast_port))
-        logger.debug("Broadcast UDP packet of length %d on iface %s: %s",
-                        sendbytes, self._iface, data)
-
+        logger.debug("Broadcast UDP packet of length %d on iface %s: %s", sendbytes, self._iface, data)
 
     async def start(self) -> None:
         """Start the UDP server that listens for messages from other relays and broadcasts them"""
@@ -176,6 +175,7 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         self._rebroad_sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_UDP)
         self._rebroad_sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, True)
         self._rebroad_sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, True)
+        self._rebroad_sock.setblocking(False)
 
         # Get a reference to the event loop as we plan to use
         # low-level APIs.
@@ -184,9 +184,7 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         # One protocol instance will be created to serve all
         # client requests.
         transport, _ = await loop.create_datagram_endpoint(
-            lambda: self,
-            local_addr=self.local_addr,
-            allow_broadcast=True
+            lambda: self, local_addr=self.local_addr, allow_broadcast=True
         )
 
         try:
