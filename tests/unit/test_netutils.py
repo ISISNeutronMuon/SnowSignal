@@ -1,10 +1,9 @@
 import unittest
 import ipaddress
-import sys
 
 import psutil
 
-from src import netutils
+from snowsignal import netutils
 
 class TestNetUtilsFunctions(unittest.TestCase):
 

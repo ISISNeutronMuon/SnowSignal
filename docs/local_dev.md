@@ -39,15 +39,15 @@ This demo uses [Windows Terminal in a four pane](https://learn.microsoft.com/en-
 
 Although in the demo the server1 container SnowSignal is started using the command 
 ```
-python -m src.snowsignal --other-relays 172.27.0.2 -ll debug
+python -m snowsignal.snowsignal --other-relays 172.27.0.2 -ll debug
 ```
 it is easier to use
 ```
-python -m src.snowsignal --other-relays server2 -ll debug
+python -m snowsignal.snowsignal --other-relays server2 -ll debug
 ```
 which means the IP address of server2 does not need to be determined in advance.
 
 The server2 instance of SnowSignal is started using the command
 ```
-python -m src.snowsignal -ll debug
+python -m snowsignal.snowsignal -ll debug
 ```

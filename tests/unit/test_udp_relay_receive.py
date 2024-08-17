@@ -11,7 +11,7 @@ import scapy.layers.l2
 import scapy.layers.inet
 import scapy.packet
 
-from src import udp_relay_receive
+from snowsignal import udp_relay_receive
 
 class TestUDPRelayReceiveMethods(unittest.TestCase):
     """ Test the udp_relay_receive class method functions """

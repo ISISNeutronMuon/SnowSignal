@@ -9,7 +9,7 @@ import scapy.layers.l2
 import scapy.layers.inet
 import scapy.packet
 
-from src import udp_relay_transmit
+from snowsignal import udp_relay_transmit
 
 class TestUDPRelayTransmitMethods(unittest.IsolatedAsyncioTestCase):
     """ Test UDPRelayTransmit class """
@@ -119,12 +119,12 @@ class TestUDPRelayTransmitMethods(unittest.IsolatedAsyncioTestCase):
         test_packet = (self._create_broadcast_test_packet().raw, ('eth0', 2048, 0, 772, b'\x00\x00\x00\x00\x00\x00'))
         with (
             patch('asyncio.SelectorEventLoop.sock_recvfrom', return_value=test_packet),
-            patch('src.udp_relay_transmit.UDPRelayTransmit._continue_while_loop', return_value=False),
+            patch('snowsignal.udp_relay_transmit.UDPRelayTransmit._continue_while_loop', return_value=False),
             patch.object(transmitter, 'l1filter', wraps=transmitter.l1filter) as l1filter_mock,
             patch.object(transmitter, 'l2filter', wraps=transmitter.l2filter) as l2filter_mock,
             patch.object(transmitter, 'l3filter', wraps=transmitter.l3filter) as l3filter_mock,
             patch.object(transmitter, 'l4filter', wraps=transmitter.l4filter) as l4filter_mock,
-            patch('src.udp_relay_transmit.UDPRelayTransmit._send_to_relays_bytes') as sendtorelays_mock,
+            patch('snowsignal.udp_relay_transmit.UDPRelayTransmit._send_to_relays_bytes') as sendtorelays_mock,
         ):
             await transmitter.start()
 

@@ -9,8 +9,8 @@ import scapy.layers.l2
 import scapy.layers.inet
 import scapy.packet
 
-from src import packet
-from src.netutils import machine_readable_mac
+from snowsignal import packet
+from snowsignal.netutils import machine_readable_mac
 
 class TestPacketMethods(unittest.TestCase):
 
@@ -41,7 +41,7 @@ class TestPacketMethods(unittest.TestCase):
         self.assertEqual( pack.eth_dst_mac, machine_readable_mac('ff:ff:ff:ff:ff:ff') )
         self.assertEqual( pack.eth_src_mac, machine_readable_mac('00:0a:1b:2c:3d:4e') )
 
-    @patch('src.packet.Packet._decode_ipv4', side_effect=packet.Packet._decode_ipv4, autospec=True)
+    @patch('snowsignal.packet.Packet._decode_ipv4', side_effect=packet.Packet._decode_ipv4, autospec=True)
     def test_decodeip_ip4udp_packet(self, decode_ipv4_mock : unittest.mock.MagicMock):
     # def test_decodeip_ip4udp_packet(self):
         pack = packet.Packet( self._create_ipv4_udp_frame() )
@@ -72,7 +72,7 @@ class TestPacketMethods(unittest.TestCase):
         self.assertEqual( pack.eth_dst_mac, machine_readable_mac('ff:ff:ff:ff:ff:ff') )
         self.assertEqual( pack.eth_src_mac, machine_readable_mac('00:0a:1b:2c:3d:4e') )
 
-    @patch('src.packet.Packet._decode_ipv6', side_effect=packet.Packet._decode_ipv6, autospec=True)
+    @patch('snowsignal.packet.Packet._decode_ipv6', side_effect=packet.Packet._decode_ipv6, autospec=True)
     def test_decodeip_ip6udp_packet(self, decode_ipv6_mock : unittest.mock.MagicMock):
         pack = packet.Packet( self._create_ipv6_udp_frame() )
         pack.decode_ip()

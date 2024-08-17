@@ -10,7 +10,7 @@ services:
         hostname: server1
         container_name: server1
         build:
-            context: ./src
+            context: ./snowsignal
         command: "sleep infinity"
         volumes:
             - .:/snowsignal/
@@ -22,7 +22,7 @@ services:
         hostname: server2
         container_name: server2
         build:
-            context: ./src
+            context: ./snowsignal
         command: "sleep infinity"
         volumes:
             - .:/snowsignal/

@@ -12,7 +12,7 @@ import scapy.layers.inet
 import scapy.packet
 import scapy.sendrecv
 
-from src import netutils, snowsignal
+from snowsignal import netutils, snowsignal
 
 # Scapy a bit chatty so quiet it a bit
 scapy.config.conf.use_pcap = False
@@ -87,8 +87,8 @@ class TestSnowSignalSynch(unittest.TestCase):
             self.assertTrue(snowsignal.is_swarmmode())
 
     # Setup a list of local IPs and a list of relays. At least one entry should overlap
-    @patch('src.snowsignal.get_localhost_ips', return_value = ['127.0.0.1'])
-    @patch('src.snowsignal.get_ips_from_name', return_value = ['127.0.0.1', '8.8.8.8'])
+    @patch('snowsignal.snowsignal.get_localhost_ips', return_value = ['127.0.0.1'])
+    @patch('snowsignal.snowsignal.get_ips_from_name', return_value = ['127.0.0.1', '8.8.8.8'])
     def test_discover_relays(self, *_):
         """ Test relay discovery """
 

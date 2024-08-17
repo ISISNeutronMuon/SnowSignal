@@ -1,2 +1,0 @@
-configargparse==1.*
-psutil==5.*
