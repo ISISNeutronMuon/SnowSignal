@@ -1,5 +1,3 @@
-image: python:latest
-
 stages:
   - format-lint
   - test
@@ -16,12 +14,14 @@ stages:
 
 format:
   <<: *before_script_template
+  image: python:latest
   stage: format-lint
   script:
     - black --line-length 120 --check --diff --color ./src
 
 lint:
   <<: *before_script_template
+  image: python:latest
   stage: format-lint
   script:
     - flake8 --ignore E501,W503 ./src
@@ -36,6 +36,7 @@ lint:
 
 unit-test:
   <<: *test_job_template
+  image: python:latest
   script:
     - python -m coverage run --source=. -m unittest discover
     - coverage report -m
@@ -52,6 +53,7 @@ unit-test:
 
 Run unittests:
   <<: *before_script_template
+  image: python:latest
   stage: test
   script:
     - python -m coverage run --source=. -m unittest discover
@@ -84,6 +86,7 @@ Rebuild Image:
 Deploy Image:
   stage: deploy
   when: on_success
+  image: docker
   script: 
     - apk add curl
     - curl -X POST $WEBHOOK_APP
