@@ -34,9 +34,8 @@ lint:
     matrix:
       - VERSION: ['3.10', '3.11']
 
-unit-test:
+Older verisons unittests (Optional):
   <<: *test_job_template
-  image: python:latest
   script:
     - python -m coverage run --source=. -m unittest discover
     - coverage report -m
