@@ -131,20 +131,20 @@ class Packet:
     def decode_ip(self) -> None:
         """Decode the IP Protocol header"""
         try:
-            match self.eth_protocol:
-                case EthernetProtocol.UNKNOWN:
-                    # If we don't know what this is then do nothing
-                    return
 
-                case EthernetProtocol.IPv4:
-                    self._decode_ipv4()
+            if self.eth_protocol == EthernetProtocol.IPv4:
+                self._decode_ipv4()
 
-                case EthernetProtocol.IPv6:
-                    self._decode_ipv6()
+            elif self.eth_protocol == EthernetProtocol.IPv6:
+                self._decode_ipv6()
 
-                case _:
-                    # This ought to be impossible so we will raise in this case
-                    raise SyntaxError(f"Unhandled ip_protocol type {self.eth_protocol}")
+            elif self.eth_protocol == EthernetProtocol.UNKNOWN:
+                # If we don't know what this is then do nothing
+                return
+
+            else:
+                # This ought to be impossible so we will raise in this case
+                raise SyntaxError(f"Unhandled ip_protocol type {self.eth_protocol}")
         except Exception as e:
             raise BadPacketException from e
 
