@@ -33,7 +33,7 @@ services:
         hostname: probe1
         container_name: probe1
         build:
-            context: ./test
+            context: ./tests
         networks:
             - udptest1
 
@@ -41,7 +41,7 @@ services:
         hostname: probe2
         container_name: probe2
         build:
-            context: ./test
+            context: ./tests
         networks:
             - udptest2
 

@@ -1,0 +1,2 @@
+configargparse>=1.7
+psutil>=5.9

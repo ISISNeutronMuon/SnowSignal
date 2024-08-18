@@ -46,7 +46,7 @@ extend-ignore = ["E203", "E501", "W503"]
 max-line-length = 120
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/"]
+packages = ["snowsignal/"]
 
 [tool.black]
 line-length = 120
@@ -57,6 +57,9 @@ diff = true
 [tool.coverage.run]
 source = ["."]
 omit = ["./tests/locust/"]
+
+[tool.coverage.report]
+show_missing = true
 
 [tool.coverage.xml]
 output = "coverage.xml"
