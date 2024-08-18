@@ -16,7 +16,6 @@ import asyncio
 import ipaddress
 import logging
 import socket
-import sys
 from typing import Sequence
 
 from .configure import ConfigArgs
