@@ -31,7 +31,7 @@ lint:
   image: "python:$VERSION"
   parallel:
     matrix:
-      - VERSION: ['3.10', '3.11']
+      - VERSION: ['3.8', '3.9', '3.10', '3.11', '3.12']
 
 Older verisons unittests (Optional):
   <<: *test_job_template

@@ -5,7 +5,7 @@ dependencies = [
     "configargparse>=1.7",
     "psutil>=5.9",
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.8"
 authors = [
   {name = "Ivan Finch", email = "ivan.finch@stfc.ac.uk"},
 ]
@@ -35,6 +35,12 @@ test = [
   "flake8>=7.1",
   "Flake8-pyproject>=1.2",
   "coverage>=7.6"
+]
+build = [
+  "build>=1.2"
+]
+distribute = [
+  "twine>=5.1"
 ]
 
 [build-system]
