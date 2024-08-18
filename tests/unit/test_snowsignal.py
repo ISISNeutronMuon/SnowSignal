@@ -1,4 +1,5 @@
 """ Tests for the snowsignal file """
+
 import asyncio
 import logging
 import os
@@ -7,6 +8,7 @@ from unittest.mock import patch
 import unittest.mock
 
 import scapy.compat
+import scapy.config
 import scapy.layers.l2
 import scapy.layers.inet
 import scapy.packet
@@ -20,45 +22,47 @@ scapy.config.conf.use_npcap = False
 scapy.config.conf.verb = 0
 scapy.config.conf.logLevel = logging.ERROR
 
+
 class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
-    """ Test the asynch functions in snowsignal.py """
+    """Test the asynch functions in snowsignal.py"""
 
     def setUp(self):
-        self._test_payload = b'test_payload'
+        self._test_payload = b"test_payload"
 
     def _create_broadcast_test_packet(self, src) -> scapy.packet.Packet:
-        packet =  scapy.layers.l2.Ether(dst="ff:ff:ff:ff:ff:ff", src='00:0a:1b:2c:3d:4e') \
-                 /scapy.layers.inet.IP(dst='255.255.255.255', src=src, ihl=5, flags='DF') \
-                 /scapy.layers.inet.UDP(dport=5076) \
-                 /scapy.packet.Raw(load=self._test_payload)
+        packet = (
+            scapy.layers.l2.Ether(dst="ff:ff:ff:ff:ff:ff", src="00:0a:1b:2c:3d:4e")
+            / scapy.layers.inet.IP(dst="255.255.255.255", src=src, ihl=5, flags="DF")
+            / scapy.layers.inet.UDP(dport=5076)
+            / scapy.packet.Raw(load=self._test_payload)
+        )
 
         return packet
 
     async def test_main_runs(self):
-        """ See if main executes without any problems! """
+        """See if main executes without any problems!"""
 
-        await snowsignal.main('--log-level=error', loop_forever=False)
+        await snowsignal.main("--log-level=error", loop_forever=False)
 
-    @patch.object(snowsignal.UDPRelayReceive, 'datagram_received')
-    async def test_integration(self,
-                               receive_datagram_mock : unittest.mock.AsyncMock, 
-                               ):
-        """ Simple integration test """
+    @patch.object(snowsignal.UDPRelayReceive, "datagram_received")
+    async def test_integration(
+        self,
+        receive_datagram_mock: unittest.mock.AsyncMock,
+    ):
+        """Simple integration test"""
         # Start main, note that we are using the loopback interface. This is
         # important for CI/CD testing (and handy for keeping our test packets
         # local).
-        main_task = asyncio.create_task( snowsignal.main('--target-interface=lo --log-level=error',
-                                                         loop_forever=True)
-                                       )
+        main_task = asyncio.create_task(snowsignal.main("--target-interface=lo --log-level=error", loop_forever=True))
 
         # Give time for setup to happen
         await asyncio.sleep(0.5)
 
-        # Send a test broadcast packet to the loopback interface 
-        local_addr = netutils.get_localipv4_from_iface('lo')
+        # Send a test broadcast packet to the loopback interface
+        local_addr = netutils.get_localipv4_from_iface("lo")
         send_packet = self._create_broadcast_test_packet(local_addr)
         send_packet.show2(dump=True)
-        scapy.sendrecv.sendp(send_packet, 'lo')
+        scapy.sendrecv.sendp(send_packet, "lo")
 
         # And some time for packets to fly around
         await asyncio.sleep(0.25)
@@ -74,24 +78,25 @@ class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
         # Quit main, though it probably quits anyway
         main_task.cancel()
 
+
 class TestSnowSignalSynch(unittest.TestCase):
-    """ Test the non-asynch functions in snowsignal"""
+    """Test the non-asynch functions in snowsignal"""
 
     def test_is_swarmmode(self):
-        """ Test swarmmode detection """
+        """Test swarmmode detection"""
         with patch.dict(os.environ):
-            os.environ.pop('SERVICENAME', None)
+            os.environ.pop("SERVICENAME", None)
             self.assertFalse(snowsignal.is_swarmmode())
 
         with patch.dict(os.environ, {"SERVICENAME": "something"}):
             self.assertTrue(snowsignal.is_swarmmode())
 
     # Setup a list of local IPs and a list of relays. At least one entry should overlap
-    @patch('snowsignal.snowsignal.get_localhost_ips', return_value = ['127.0.0.1'])
-    @patch('snowsignal.snowsignal.get_ips_from_name', return_value = ['127.0.0.1', '8.8.8.8'])
+    @patch("snowsignal.snowsignal.get_localhost_ips", return_value=["127.0.0.1"])
+    @patch("snowsignal.snowsignal.get_ips_from_name", return_value=["127.0.0.1", "8.8.8.8"])
     def test_discover_relays(self, *_):
-        """ Test relay discovery """
+        """Test relay discovery"""
 
         with patch.dict(os.environ, {"SERVICENAME": "something"}):
             valid_ips = snowsignal.discover_relays()
-            self.assertEqual(valid_ips, ['8.8.8.8'])
+            self.assertEqual(valid_ips, ["8.8.8.8"])
