@@ -153,25 +153,18 @@ class UDPRelayTransmit:
             while self._loop_forever:
                 loop = asyncio.get_running_loop()
 
-                if sys.version_info >= (3, 11, 0):
-                    raw_packet = await loop.sock_recvfrom(sock, 1024)
-                    (ifname, proto, pkttype, hatype, addr) = raw_packet[1]
-                    raw_packet = raw_packet[0]
-                    logger.debug(
-                        "Received on iface %s (proto %r, pktytype %r, hatype %r, addr %r) data %r",
-                        ifname,
-                        socket.ntohs(proto),
-                        identify_pkttype(pkttype),
-                        socket.ntohs(hatype),
-                        human_readable_mac(addr),
-                        raw_packet,
-                    )
-                else:
-                    raw_packet = await loop.sock_recv(sock, 1024)
-                    logger.debug(
-                        "Received on data %r",
-                        raw_packet,
-                    )
+                raw_packet = await loop.sock_recvfrom(sock, 1024)
+                (ifname, proto, pkttype, hatype, addr) = raw_packet[1]
+                raw_packet = raw_packet[0]
+                logger.debug(
+                    "Received on iface %s (proto %r, pktytype %r, hatype %r, addr %r) data %r",
+                    ifname,
+                    socket.ntohs(proto),
+                    identify_pkttype(pkttype),
+                    socket.ntohs(hatype),
+                    human_readable_mac(addr),
+                    raw_packet,
+                )
 
                 try:
                     # Check Level 1 physical layer, i.e. network interface

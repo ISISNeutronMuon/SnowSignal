@@ -31,7 +31,7 @@ lint:
   image: "python:$VERSION"
   parallel:
     matrix:
-      - VERSION: ['3.8', '3.9', '3.10', '3.11', '3.12']
+      - VERSION: ['3.11', '3.12']
 
 Older verisons unittests (Optional):
   <<: *test_job_template
@@ -39,8 +39,6 @@ Older verisons unittests (Optional):
     - python -m coverage run --source=. -m unittest discover tests/
     - coverage report -m
     - coverage xml
-  rules:
-    - allow_failure: true # Only the later tests must succeed
   coverage: '/TOTAL.*\s+(\d+\%)/'
   artifacts:
     when: always
@@ -49,21 +47,21 @@ Older verisons unittests (Optional):
         coverage_format: cobertura
         path: ./coverage.xml
 
-Run unittests:
-  <<: *before_script_template
-  image: python:latest
-  stage: test
-  script:
-    - python -m coverage run --source=. -m unittest discover tests/
-    - coverage report -m
-    - coverage xml
-  coverage: '/TOTAL.*\s+(\d+\%)/'
-  artifacts:
-    when: always
-    reports:
-      coverage_report:
-        coverage_format: cobertura
-        path: ./coverage.xml
+# Run unittests:
+#   <<: *before_script_template
+#   image: python:latest
+#   stage: test
+#   script:
+#     - python -m coverage run --source=. -m unittest discover tests/
+#     - coverage report -m
+#     - coverage xml
+#   coverage: '/TOTAL.*\s+(\d+\%)/'
+#   artifacts:
+#     when: always
+#     reports:
+#       coverage_report:
+#         coverage_format: cobertura
+#         path: ./coverage.xml
 
 Rebuild Image: 
   stage: build
