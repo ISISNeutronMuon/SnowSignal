@@ -70,16 +70,17 @@ def configure(argv: Sequence[str] | None = None) -> ConfigArgs:
     # config = p.parse_args(argv)
     config = ConfigArgs(**p.parse_args(argv).__dict__)
 
-    if config.log_level == "critical":
-        loglevel = logging.CRITICAL
-    elif config.log_level == "error":
-        loglevel = logging.ERROR
-    elif config.log_level == "warning":
-        loglevel = logging.WARNING
-    elif config.log_level == "info":
-        loglevel = logging.INFO
-    elif config.log_level == "debug":
-        loglevel = logging.DEBUG
+    match config.log_level:
+        case "critical":
+            loglevel = logging.CRITICAL
+        case "error":
+            loglevel = logging.ERROR
+        case "warning":
+            loglevel = logging.WARNING
+        case "info":
+            loglevel = logging.INFO
+        case "debug":
+            loglevel = logging.DEBUG
 
     if loglevel < logging.INFO:
         logging.basicConfig(

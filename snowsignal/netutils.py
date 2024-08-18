@@ -122,15 +122,16 @@ def machine_readable_mac(macstr: str) -> bytes:
 
 def identify_pkttype(pkttype: int) -> str:
     """Decode packet type from socket.recvfrom"""
-    if pkttype == socket.PACKET_HOST:
-        return "PACKET_HOST"
-    elif pkttype == socket.PACKET_BROADCAST:
-        return "PACKET_BROADCAST"
-    elif pkttype == socket.PACKET_MULTICAST:
-        return "PACKET_MULTICAST"
-    elif pkttype == socket.PACKET_OTHERHOST:
-        return "PACKET_OTHERHOST"
-    elif pkttype == socket.PACKET_OUTGOING:
-        return "PACKET_OUTGOING"
-    else:
-        return "UNKNOWN PACKET TYPE"
+    match pkttype:
+        case socket.PACKET_HOST:
+            return "PACKET_HOST"
+        case socket.PACKET_BROADCAST:
+            return "PACKET_BROADCAST"
+        case socket.PACKET_MULTICAST:
+            return "PACKET_MULTICAST"
+        case socket.PACKET_OTHERHOST:
+            return "PACKET_OTHERHOST"
+        case socket.PACKET_OUTGOING:
+            return "PACKET_OUTGOING"
+        case _:
+            return "UNKNOWN PACKET TYPE"
