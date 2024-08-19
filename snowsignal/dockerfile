@@ -2,9 +2,8 @@
 # psutils requirement in requirements.txt
 FROM python:3.12-slim
 
-ADD requirements.txt /snowsignal/
-WORKDIR /snowsignal
-RUN pip install -r requirements.txt
-ADD *.py /snowsignal/src/
+# Token has read_api and read_repository permissions and so does not need to be kept secret
+# However it will expire
+RUN pip install SnowSignal --index-url https://__token__:glpat-yuAqQ3Ey_NYCLaDqyZWy@gitlab.stfc.ac.uk/api/v4/projects/5671/packages/pypi/simple 
 
-CMD ["python", "-m", "src.snowsignal"]
+CMD ["python", "-m", "snowsignal"]
