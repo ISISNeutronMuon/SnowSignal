@@ -1,6 +1,7 @@
 stages:
   - format-lint
   - test
+  - pypi
   - build
   - deploy
 
@@ -33,7 +34,7 @@ lint:
     matrix:
       - VERSION: ['3.11', '3.12']
 
-Older verisons unittests (Optional):
+Run unittests:
   <<: *test_job_template
   script:
     - python -m coverage run --source=. -m unittest discover tests/
@@ -47,25 +48,18 @@ Older verisons unittests (Optional):
         coverage_format: cobertura
         path: ./coverage.xml
 
-# Run unittests:
-#   <<: *before_script_template
-#   image: python:latest
-#   stage: test
-#   script:
-#     - python -m coverage run --source=. -m unittest discover tests/
-#     - coverage report -m
-#     - coverage xml
-#   coverage: '/TOTAL.*\s+(\d+\%)/'
-#   artifacts:
-#     when: always
-#     reports:
-#       coverage_report:
-#         coverage_format: cobertura
-#         path: ./coverage.xml
+Publish:
+  <<: *before_script_template
+  stage: pypi
+  when: on_success
+  image: python:latest
+  script:
+    - pip install .[dist]
+    - python -m build
+    - TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token python -m twine upload --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
 
 Rebuild Image: 
   stage: build
-  when: on_success
   image: docker
   variables:
     DOCKER_TAG: $CI_COMMIT_REF_NAME

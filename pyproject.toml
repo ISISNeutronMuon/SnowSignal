@@ -1,6 +1,6 @@
 [project]
 name = "SnowSignal"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
     "configargparse>=1.7",
     "psutil>=5.9",
@@ -38,11 +38,9 @@ test = [
   "Flake8-pyproject>=1.2",
   "coverage>=7.6"
 ]
-build = [
-  "build>=1.2"
-]
-distribute = [
-  "twine>=5.1"
+dist = [
+  "build>=1.2",
+  "twine>=5.1",
 ]
 
 [build-system]
