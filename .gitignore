@@ -1,3 +1,7 @@
+# Hatch-VCS
+_version.py
+
+# VSCode files
 .vscode/
 .vscode/*
 !.vscode/settings.json

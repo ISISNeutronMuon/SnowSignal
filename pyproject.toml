@@ -1,6 +1,6 @@
 [project]
 name = "SnowSignal"
-version = "0.1.0"
+dynamic = ["version"]
 dependencies = [
     "configargparse>=1.7",
     "psutil>=5.9",
@@ -44,21 +44,14 @@ dist = [
 ]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
-
-[tool.flake8]
-extend-ignore = ["E203", "E501", "W503"]
-max-line-length = 120
-
-[tool.hatch.build.targets.wheel]
-packages = ["snowsignal/"]
 
 [tool.black]
 line-length = 120
-# check=true
-# color = true
-# diff = true
+check=true
+color = true
+diff = true
 
 [tool.coverage.run]
 source = ["."]
@@ -69,3 +62,17 @@ show_missing = true
 
 [tool.coverage.xml]
 output = "coverage.xml"
+
+[tool.flake8]
+extend-ignore = ["E203", "E501", "W503"]
+max-line-length = 120
+
+[tool.hatch.build.hooks.vcs]
+version-file = "_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["snowsignal/"]
+
+[tool.hatch.version]
+source = "vcs"
+
