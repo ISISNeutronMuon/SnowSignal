@@ -17,14 +17,8 @@ format:
   image: python:latest
   stage: format-lint
   script:
-    - black ./snowsignal
-
-lint:
-  <<: *before_script_template
-  image: python:latest
-  stage: format-lint
-  script:
-    - flake8 ./snowsignal
+    - ruff check --no-fix
+    - ruff format --diff
 
 .test_job_template: &test_job_template
   <<: *before_script_template

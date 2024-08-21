@@ -1,4 +1,4 @@
-""" Network related utility functions for SnowSignal """
+"""Network related utility functions for SnowSignal"""
 
 import ipaddress
 import logging
@@ -55,7 +55,9 @@ class ResourceNotFoundException(OSError):
 
 
 def get_from_iface(
-    iface: str, family: socket.AddressFamily | int, attribute: str = "address"  # pylint: disable=no-member
+    iface: str,
+    family: socket.AddressFamily | int,
+    attribute: str = "address",  # pylint: disable=no-member
 ):
     """Get the IP address associated with a network interface"""
     snicaddrs = psutil.net_if_addrs()[iface]
@@ -97,9 +99,7 @@ def get_localhost_macs() -> list[str]:
 
 def get_broadcast_from_iface(iface: str) -> str:
     """Get the MAC address associated with a network interface"""
-    broadcast_address = get_from_iface(
-        iface, socket.AddressFamily.AF_INET, attribute="broadcast"
-    )  # pylint: disable=no-member
+    broadcast_address = get_from_iface(iface, socket.AddressFamily.AF_INET, attribute="broadcast")  # pylint: disable=no-member
 
     # If we don't get a valid broadcast address then attempt to substitute one
     if not broadcast_address:

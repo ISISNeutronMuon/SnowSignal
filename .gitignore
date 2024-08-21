@@ -1,3 +1,6 @@
+# Ruff
+.ruff_cache
+
 # Hatch-VCS
 _version.py
 

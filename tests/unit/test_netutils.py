@@ -1,5 +1,5 @@
-import unittest
 import ipaddress
+import unittest
 
 import psutil
 
@@ -7,7 +7,6 @@ from snowsignal import netutils
 
 
 class TestNetUtilsFunctions(unittest.TestCase):
-
     def test_get_ips_from_name(self):
         # Check that the function returns one or more IP addresses
         ips = netutils.get_ips_from_name("example.com")

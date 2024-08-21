@@ -1,9 +1,8 @@
-""" Simplified model of a Ethernet / IP / UDP packet """
+"""Simplified model of a Ethernet / IP / UDP packet"""
 
 import dataclasses
 import logging
 import socket
-
 from enum import Enum, unique
 from struct import unpack
 
@@ -56,7 +55,6 @@ class Packet:
     udp_chksum: int | None = None
 
     def __post_init__(self) -> None:
-
         # Always decode the Ethernet portion, but we're lazy about
         # decoding the higher protocols
         self.decode_ethernet()

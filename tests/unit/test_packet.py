@@ -1,13 +1,13 @@
-""" Test packet.py file """
+"""Test packet.py file"""
 
 import unittest
 import unittest.mock
 from unittest.mock import patch
 
 import scapy.compat
+import scapy.layers.inet
 import scapy.layers.inet6
 import scapy.layers.l2
-import scapy.layers.inet
 import scapy.packet
 
 from snowsignal import packet
@@ -15,7 +15,6 @@ from snowsignal.netutils import machine_readable_mac
 
 
 class TestPacketMethods(unittest.TestCase):
-
     def _create_ipv4_udp_frame(self) -> bytes:
         pack = (
             scapy.layers.l2.Ether(dst="ff:ff:ff:ff:ff:ff", src="00:0a:1b:2c:3d:4e")

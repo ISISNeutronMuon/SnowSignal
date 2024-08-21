@@ -1,14 +1,14 @@
-""" SnowSignal - UDP Broadcast Relay """
+"""SnowSignal - UDP Broadcast Relay"""
 
 import asyncio
 import ipaddress
 import logging
 import os
 import sys
-from typing import Sequence
+from collections.abc import Sequence
 
-from .configure import configure, ConfigArgs
-from .netutils import get_localhost_ips, get_ips_from_name, get_localipv4_from_iface
+from .configure import ConfigArgs, configure
+from .netutils import get_ips_from_name, get_localhost_ips, get_localipv4_from_iface
 from .udp_relay_receive import UDPRelayReceive
 from .udp_relay_transmit import UDPRelayTransmit
 

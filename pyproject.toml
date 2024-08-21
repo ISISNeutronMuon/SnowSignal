@@ -33,9 +33,7 @@ Repository = "https://gitlab.stfc.ac.uk/isis-accelerator-controls/playground/iva
 [project.optional-dependencies]
 test = [
   "scapy~=2.0",
-  "black>=24.4",
-  "flake8>=7.1",
-  "Flake8-pyproject>=1.2",
+  "ruff>0.6",
   "coverage>=7.6"
 ]
 dist = [
@@ -47,12 +45,6 @@ dist = [
 requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
-[tool.black]
-line-length = 120
-check=true
-color = true
-diff = true
-
 [tool.coverage.run]
 source = ["."]
 omit = ["./tests/locust/"]
@@ -63,10 +55,6 @@ show_missing = true
 [tool.coverage.xml]
 output = "coverage.xml"
 
-[tool.flake8]
-extend-ignore = ["E203", "E501", "W503"]
-max-line-length = 120
-
 [tool.hatch.build.hooks.vcs]
 version-file = "_version.py"
 
@@ -76,3 +64,12 @@ packages = ["snowsignal/"]
 [tool.hatch.version]
 source = "vcs"
 
+[tool.ruff]
+# Allow lines to be as long as 120.
+line-length = 120
+
+[tool.ruff.lint]
+extend-select = [
+  "UP",  # pyupgrade
+  "I", # isort
+]

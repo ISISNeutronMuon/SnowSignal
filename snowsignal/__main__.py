@@ -1,6 +1,6 @@
 import asyncio
-from asyncio.log import logger
 import sys
+from asyncio.log import logger
 
 from .snowsignal import main
 

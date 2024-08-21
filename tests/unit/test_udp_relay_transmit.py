@@ -1,4 +1,4 @@
-""" Tests for the udp_relay_transmit file """
+"""Tests for the udp_relay_transmit file"""
 
 import ipaddress
 import unittest
@@ -6,8 +6,8 @@ import unittest.mock
 from unittest.mock import patch
 
 import scapy.compat
-import scapy.layers.l2
 import scapy.layers.inet
+import scapy.layers.l2
 import scapy.packet
 
 from snowsignal import udp_relay_transmit

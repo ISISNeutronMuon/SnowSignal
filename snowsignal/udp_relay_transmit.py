@@ -1,4 +1,5 @@
-""" The UDPRelayTransmit class is confusingly named. It transmits packets
+"""
+The UDPRelayTransmit class is confusingly named. It transmits packets
 into the relay mesh network. That means that it is also the class that
 listens for UDP broadcasts on the specified network interface and port.
 
@@ -16,12 +17,11 @@ import asyncio
 import ipaddress
 import logging
 import socket
-from typing import Sequence
+from collections.abc import Sequence
 
 from .configure import ConfigArgs
-
-from .packet import BadPacketException, EthernetProtocol, Packet
 from .netutils import get_localhost_macs, human_readable_mac, identify_pkttype, machine_readable_mac
+from .packet import BadPacketException, EthernetProtocol, Packet
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +145,9 @@ class UDPRelayTransmit:
         # define ETH_P_ALL    0x0003          /* Every packet (be careful!!!) */
         # define ETH_P_IP     0x0800          IP packets only; I believe this is IPv4
         with socket.socket(
-            socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(0x0800)  # pylint: disable=no-member
+            socket.AF_PACKET,
+            socket.SOCK_RAW,
+            socket.ntohs(0x0800),  # pylint: disable=no-member
         ) as sock:
             sock.setblocking(False)
 

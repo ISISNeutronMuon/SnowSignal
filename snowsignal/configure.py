@@ -1,9 +1,10 @@
-""" Configuration for SnowSignal
+"""Configuration for SnowSignal
 uses configargparse https://pypi.org/project/ConfigArgParse/
 """
 
 import logging
-from typing import NamedTuple, Sequence
+from collections.abc import Sequence
+from typing import NamedTuple
 
 import configargparse
 

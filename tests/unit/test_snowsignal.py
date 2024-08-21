@@ -1,16 +1,16 @@
-""" Tests for the snowsignal file """
+"""Tests for the snowsignal file"""
 
 import asyncio
 import logging
 import os
 import unittest
-from unittest.mock import patch
 import unittest.mock
+from unittest.mock import patch
 
 import scapy.compat
 import scapy.config
-import scapy.layers.l2
 import scapy.layers.inet
+import scapy.layers.l2
 import scapy.packet
 import scapy.sendrecv
 
