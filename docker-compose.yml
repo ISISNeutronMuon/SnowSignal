@@ -12,16 +12,6 @@ services:
       placement:
          max_replicas_per_node: 1
 
-  probe:
-    image: harbor.stfc.ac.uk/isis-accelerator-controls/internal-pvagw-tests
-    networks:
-      - snowsignal-test
-    deploy: 
-      mode: global
-      placement:
-         max_replicas_per_node: 1
-    command: ["sleep", "infinity"]
-
 networks:
-  snowsignal-test:
+  controls:
     external: true
