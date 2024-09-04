@@ -69,8 +69,10 @@ Rebuild Image:
 
 Deploy Image:
   stage: deploy
-  when: on_success
+  rules:
+    - if: $CI_COMMIT_BRANCH == "dev"
+      when: on_success
   image: docker
   script: 
     - apk add curl
-    - curl -X POST $WEBHOOK_APP
+    - curl -X POST $PORTAINER_WEBHOOK_DEV
