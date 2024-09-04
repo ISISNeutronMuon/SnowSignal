@@ -67,7 +67,7 @@ Rebuild Image:
     - docker build -t harbor.stfc.ac.uk/isis-accelerator-controls/snowsignal:$DOCKER_TAG snowsignal
     - docker push harbor.stfc.ac.uk/isis-accelerator-controls/snowsignal:$DOCKER_TAG
 
-Deploy Image:
+Deploy Development Image:
   stage: deploy
   rules:
     - if: $CI_COMMIT_BRANCH == "dev"
@@ -76,3 +76,13 @@ Deploy Image:
   script: 
     - apk add curl
     - curl -X POST $PORTAINER_WEBHOOK_DEV
+
+Deploy Production Image:
+  stage: deploy
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: on_success
+  image: docker
+  script: 
+    - apk add curl
+    - curl -X POST $PORTAINER_WEBHOOK_PROD
