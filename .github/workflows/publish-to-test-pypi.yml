@@ -8,7 +8,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v5
-    - run: pip install [.test]
+    - run: pip install .[test]
     - run: | 
         ruff check --no-fix
         ruff format --diff
