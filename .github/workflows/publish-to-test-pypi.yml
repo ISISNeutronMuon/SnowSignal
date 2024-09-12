@@ -35,7 +35,8 @@ jobs:
     - name: Install dependencies
       run: |
         pip install .[test]
-        sudo pip install .[test]
+        PIP_PATH=$(which pip)
+        sudo $PIP_PATH install .[test]
     - name: Run tests
       run: |
         PYTHON_PATH=$(which python)
