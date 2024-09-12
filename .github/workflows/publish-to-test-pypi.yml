@@ -34,7 +34,7 @@ jobs:
       run: pip install .[test]
     - name: Run tests
       run: |
-        python -m coverage run --source=. -m unittest discover tests/
+        sudo python -m coverage run --source=. -m unittest discover tests/
         coverage report -m
         coverage xml
     - name: Upload pytest test results
