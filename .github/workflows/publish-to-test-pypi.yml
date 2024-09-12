@@ -38,7 +38,8 @@ jobs:
         sudo pip install .[test]
     - name: Run tests
       run: |
-        sudo python -m coverage run --source=. -m unittest discover tests/
+        PYTHON_PATH=$(which python)
+        sudo $PYTHON_PATH -m coverage run --source=. -m unittest discover tests/
     - name: Gather coverage statistics
       run: |
         coverage report -m
