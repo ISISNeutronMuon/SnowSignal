@@ -20,9 +20,10 @@ jobs:
     name: Run tests on multiple Python versions
     needs:
     - lint
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [ubuntu-latest, mac-latest]
         python-version: ["3.11", "3.12"]
     steps:
     - uses: actions/checkout@v4
