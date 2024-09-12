@@ -33,7 +33,7 @@ jobs:
     - name: Install dependencies
       run: pip install .[test]
     - name: Run tests
-      run: >-
+      run: |
         python -m coverage run --source=. -m unittest discover tests/
         coverage report -m
         coverage xml
