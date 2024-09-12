@@ -14,13 +14,13 @@ maintainers = [
 ]
 description = "UDP Broadcast Relay"
 readme = "README.md"
-#license = {file = "LICENSE.txt"}
+license = {file = "LICENSE"}
 keywords = ["UDP", "docker swarm", "epics", "pvaccess",]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Environment :: Console",
   "Intended Audience :: System Administrators",
-  #"License :: OSI Approved :: MIT License",
+  "License :: OSI Approved :: BSD License",
   "Operating System :: POSIX :: Linux",
   "Programming Language :: Python",
   "Topic :: System :: Networking",
