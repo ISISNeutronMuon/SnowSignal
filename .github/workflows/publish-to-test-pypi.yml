@@ -22,10 +22,12 @@ jobs:
     - lint
     strategy:
       matrix:
-        os: [ubuntu-latest, mac-latest]
+        os: [ubuntu-latest] #, mac-latest]
         python-version: ["3.11", "3.12"]
     runs-on: ${{ matrix.os }}
     continue-on-error: true
+    container:
+      image: python:${{ matrix.python-version }}
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
