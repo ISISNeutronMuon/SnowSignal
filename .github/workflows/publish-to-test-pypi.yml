@@ -26,8 +26,6 @@ jobs:
         python-version: ["3.11", "3.12"]
     runs-on: ${{ matrix.os }}
     continue-on-error: true
-    container:
-      image: python:${{ matrix.python-version }}
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
@@ -35,10 +33,12 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
-      run: pip install .[test]
+      run: |
+        pip install .[test]
+        sudo pip install .[test]
     - name: Run tests
       run: |
-        python -m coverage run --source=. -m unittest discover tests/
+        sudo python -m coverage run --source=. -m unittest discover tests/
     - name: Gather coverage statistics
       run: |
         coverage report -m
