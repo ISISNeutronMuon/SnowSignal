@@ -14,8 +14,8 @@ maintainers = [
 ]
 description = "UDP Broadcast Relay"
 readme = "README.md"
-license = {file = "LICENSE"}
-keywords = ["UDP", "docker swarm", "epics", "pvaccess",]
+#license = {file = "LICENSE"}
+keywords = ["UDP", "UDP broadcast", "docker swarm", "epics", "pvaccess",]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Environment :: Console",
@@ -28,7 +28,7 @@ classifiers = [
 ]
 
 [project.urls]
-Repository = "https://gitlab.stfc.ac.uk/isis-accelerator-controls/playground/ivan/infrastructure/snowsignal"
+Repository = "https://github.com/ISISNeutronMuon/SnowSignal"
 
 [project.optional-dependencies]
 test = [
