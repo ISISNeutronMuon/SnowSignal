@@ -3,10 +3,19 @@ name: Publish Python 🐍 distribution 📦 to PyPI and TestPyPI
 on: push
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest 
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+    - run: pip install [.test]
+    - run: | 
+        ruff check --no-fix
+        ruff format --diff
+      
   build:
     name: Build distribution 📦
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python
