@@ -47,17 +47,17 @@ jobs:
         PYTHON_PATH=$(which python)
         sudo $PYTHON_PATH -m coverage run --source=. -m unittest discover tests/
     - name: Gather coverage statistics
+      if: ${{ always() }}
       run: |
         coverage report -m
         coverage xml
-      if: ${{ always() }}
     - name: Upload pytest test results
+      if: ${{ always() }}
       uses: actions/upload-artifact@v4
       with:
         name: coverage-results-${{ matrix.os }}-${{ matrix.python-version }}
         path: coverage.xml
       # Use always() to always run this step to publish test results when there are test failures
-      if: ${{ always() }}
 
   build:
     name: Build distribution 📦
