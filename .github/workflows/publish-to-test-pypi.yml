@@ -16,6 +16,11 @@ jobs:
         ruff check --no-fix
         ruff format --diff
 
+  # There's an oddity here I've only been able to inelegantly resolve
+  # The tests need to open sockets but don't have permissions to do so.
+  # I haven't figured out how to do so. To resolve this they need to 
+  # use sudo but that affects the pip install and we have to manually
+  # identify the versions of pip and python to install.
   test:
     name: Run tests on multiple Python versions
     needs:
@@ -65,14 +70,11 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: "3.x"
-    - name: Install pypa/build
+    - name: Install build tools
       run: >-
-        python3 -m
-        pip install
-        build
-        --user
+        pip install .[dist]
     - name: Build a binary wheel and a source tarball
-      run: python3 -m build
+      run: python -m build
     - name: Store the distribution packages
       uses: actions/upload-artifact@v4
       with:
