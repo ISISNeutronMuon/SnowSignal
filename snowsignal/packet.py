@@ -230,3 +230,122 @@ class PVAccessMessageHeader:
 
         except Exception as e:
             raise BadPacketException from e
+
+
+@dataclasses.dataclass
+class PVAccessBeaconMessage:
+    """PVAccess Beacon Message decode"""
+
+    raw: bytes
+
+    guid: str
+    flags: bytes
+    beacon_sequence_id: int
+    change_count: int
+    server_address: str  # IPv4Address | IPv6Address
+    server_port: int
+    protocol: str
+
+    def __init__(self, raw: bytes) -> None:
+        """Decode beacon message payload"""
+
+        self.raw = raw
+
+        try:
+            msg_payload = self.raw
+
+            pbm = unpack("!10sBBH16sHB", msg_payload[0:33])
+
+            self.guid = pbm[0].hex()
+            self.flags = pbm[1]
+            self.beacon_sequence_id = pbm[2]
+            self.change_count = pbm[3]
+            self.server_address = pbm[4].hex()  # ip_address(pbm[4])
+            self.server_port = pbm[5]
+
+            # Quick hack here, but we won't bother supporting protocol string lengths of more than 255 chars
+            protocol_str_length = pbm[6]
+            pbm = unpack(f"{protocol_str_length}s", msg_payload[33 : 33 + protocol_str_length])
+            self.protocol = pbm[0].decode("ascii")
+        except Exception as e:
+            raise BadPacketException from e
+
+
+@dataclasses.dataclass
+class PVAccessSearchMessage:
+    """PVAccess Beacon Message decode"""
+
+    raw: bytes
+
+    search_sequence_id: int
+    flags: bytes
+    reponse_address: str  # IPv4Address | IPv6Address
+    response_port: int
+    protocols: list[str]
+    channelnames: list[str]
+
+    @dataclasses.dataclass
+    class Channel:
+        search_instance_id: int
+        channelname: str
+
+        def __repr__(self) -> str:
+            return f"{self.search_instance_id} / {self.channelname}"
+
+    channels: list[Channel]
+
+    def __init__(self, raw: bytes) -> None:
+        """Decode search message payload"""
+
+        self.raw = raw
+
+        try:
+            msg_payload = self.raw
+
+            psm = unpack("!IB3x16sHB", msg_payload[0:27])
+
+            self.search_sequence_id = psm[0]
+            self.flags = psm[1]
+            self.reponse_address = psm[2].hex()  # ip_address(pbm[4])
+            self.response_port = psm[3]
+
+            # Decode the array of protocol strings
+            protocol_strings_count = psm[4]
+            bytes_consumed = 27
+
+            self.protocols: list[str] = []
+
+            for x in range(protocol_strings_count):
+                sl_unpacked = unpack("!B", msg_payload[bytes_consumed : bytes_consumed + 1])
+                string_len = sl_unpacked[0]
+                bytes_consumed = bytes_consumed + 1
+
+                ps_unpacked = unpack(f"!{string_len}s", msg_payload[bytes_consumed : bytes_consumed + string_len])
+                protocol_string = ps_unpacked[0].decode("ascii")
+                bytes_consumed = bytes_consumed + string_len
+
+                self.protocols.append(protocol_string)
+
+            # Decode the array of channel searches
+            cc_unpacked = unpack("!H", msg_payload[bytes_consumed : bytes_consumed + 2])
+            channels_count = cc_unpacked[0]
+            bytes_consumed = bytes_consumed + 2
+
+            self.channels: list[self.Channel] = []
+
+            for x in range(channels_count):
+                chans_unpacked = unpack("!IB", msg_payload[bytes_consumed : bytes_consumed + 5])
+                search_instance_id = chans_unpacked[0]
+                channame_string_len = chans_unpacked[1]
+                bytes_consumed = bytes_consumed + 5
+
+                ps_unpacked = unpack(
+                    f"!{channame_string_len}s", msg_payload[bytes_consumed : bytes_consumed + channame_string_len]
+                )
+                channame_string = ps_unpacked[0].decode("ascii")
+                bytes_consumed = bytes_consumed + channame_string_len
+
+                self.channels.append(self.Channel(search_instance_id, channame_string))
+
+        except Exception as e:
+            raise BadPacketException from e
