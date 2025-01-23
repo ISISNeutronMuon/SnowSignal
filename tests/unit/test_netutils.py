@@ -13,7 +13,7 @@ class TestNetUtilsFunctions(unittest.TestCase):
 
         self.assertIsInstance(ips, list)
         self.assertTrue(len(ips))
-        self.assertTrue(ipaddress.IPv4Address("93.184.215.14") in ips)
+        self.assertTrue(ipaddress.IPv4Address("96.7.128.175") in ips)
         for ip in ips:
             self.assertIsInstance(ip, (ipaddress.IPv4Address, ipaddress.IPv6Address))
 
