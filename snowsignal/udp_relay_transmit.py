@@ -21,7 +21,7 @@ from collections.abc import Sequence
 
 from .configure import ConfigArgs
 from .netutils import get_localhost_macs, human_readable_mac, identify_pkttype, machine_readable_mac
-from .packet import BadPacketException, EthernetProtocol, Packet
+from .packet import BadPacketException, EthernetProtocol, Packet, PVAccessMessageHeader
 
 logger = logging.getLogger(__name__)
 
@@ -198,6 +198,13 @@ class UDPRelayTransmit:
                     logger.debug("Malformed packet %r", bpe)
                     self._loop_forever = self._continue_while_loop()
                     continue
+
+                if logger.isEnabledFor(logging.INFO):
+                    # Use this unusual conditional in order to avoid expensive
+                    # decoding operations when we're not debugging
+                    if packet.udp_length and packet.udp_length >= 8:
+                        pvamgshdr = PVAccessMessageHeader(packet.get_udp_payload()[0:8])
+                        logger.info("%s from %s", pvamgshdr.message_command.name, packet.ip_src_addr)
 
                 # Send to other relays
                 await self._send_to_relays_packet(packet)

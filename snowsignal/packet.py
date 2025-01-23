@@ -172,3 +172,61 @@ class Packet:
     def change_ethernet_source(self, newmac) -> None:
         """Change packet Ethernet source to a new MAC address"""
         self.raw = self.raw[0:6] + newmac + self.raw[12:]
+
+
+@unique
+class PVAccessMessageType(Enum):
+    """PVAccess Application Message Type"""
+
+    BEACON = 0x00
+    VALIDATION = 0x01
+    ECHO = 0x02
+    SEARCH_REQUEST = 0x03
+    SEARCH_RESPONSE = 0x04
+    CREATE_CHANNEL = 0x07
+    DESTROY_CHANNEL = 0x08
+    GET = 0x0A
+    PUT = 0x0B
+    PUTGET = 0x0C
+    MONITOR = 0x0D
+    ARRAY = 0x0E
+    DESTROY_REQUEST = 0x0F
+    CHANNEL_PROCESS = 0x10
+    GET_INTROSPECT = 0x11
+    MESSAGE = 0x12
+    CHANNEL_RPC = 0x14
+    CANCEL_REQUEST = 0x15
+
+
+@dataclasses.dataclass
+class PVAccessMessageHeader:
+    """PVAccess Message Header decoder"""
+
+    raw: bytes
+
+    magic: int
+    version: int
+    flags: int
+    message_command: PVAccessMessageType
+    payload_size: int
+
+    def __init__(self, raw: bytes) -> None:
+        """Decode message header bytes"""
+
+        self.raw = raw
+
+        try:
+            msg_header = self.raw[0:8]
+
+            pvh = unpack("!BBBBI", msg_header)
+            if pvh[0] != 0xCA:
+                raise BadPacketException
+
+            self.magic = pvh[0]
+            self.version = pvh[1]
+            self.flags = pvh[2]
+            self.message_command = PVAccessMessageType(pvh[3])
+            self.payload_size = pvh[4]
+
+        except Exception as e:
+            raise BadPacketException from e
