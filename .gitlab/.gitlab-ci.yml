@@ -57,6 +57,11 @@ Rebuild Image:
   image: docker
   variables:
     DOCKER_TAG: $CI_COMMIT_REF_NAME
+    PIPARGS: 
+  rules:
+    - if: $CI_COMMIT_BRANCH == "dev"
+      variables:
+        PIPARGS: --pre
   services:
     - docker:dind
   script:
@@ -64,7 +69,7 @@ Rebuild Image:
     - docker build -t snowsignal snowsignal
     - docker login https://harbor.stfc.ac.uk -u $DOCKER_REG_NAME --password $DOCKER_REG_TOKEN
     - echo Build Identifiers - ${NAME}:$DOCKER_TAG
-    - docker build -t harbor.stfc.ac.uk/isis-accelerator-controls/snowsignal:$DOCKER_TAG snowsignal
+    - docker build --build-arg ${PIPARGS} -t harbor.stfc.ac.uk/isis-accelerator-controls/snowsignal:$DOCKER_TAG snowsignal
     - docker push harbor.stfc.ac.uk/isis-accelerator-controls/snowsignal:$DOCKER_TAG
 
 Deploy Development Image:
