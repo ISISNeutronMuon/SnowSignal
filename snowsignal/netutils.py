@@ -65,9 +65,7 @@ def get_from_iface(
         if snicaddr.family == family:
             return getattr(snicaddr, attribute)
 
-    raise ResourceNotFoundException(
-        f"Could not identify the {family}, " "{attribute} associated with interface {iface}"
-    )
+    raise ResourceNotFoundException(f"Could not identify the {family}, {attribute} associated with interface {iface}")
 
 
 def get_localipv4_from_iface(iface: str) -> str:

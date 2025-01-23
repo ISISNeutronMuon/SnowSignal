@@ -82,10 +82,12 @@ def configure(argv: Sequence[str] | None = None) -> ConfigArgs:
             loglevel = logging.INFO
         case "debug":
             loglevel = logging.DEBUG
+        case _:
+            loglevel = logging.WARNING
 
     if loglevel < logging.INFO:
         logging.basicConfig(
-            format="%(asctime)s - %(levelname)s - " "%(name)s.%(funcName)s: %(message)s",
+            format="%(asctime)s - %(levelname)s - %(name)s.%(funcName)s: %(message)s",
             encoding="utf-8",
             level=loglevel,
         )
@@ -100,7 +102,7 @@ def configure(argv: Sequence[str] | None = None) -> ConfigArgs:
             "Broadcast port (%i) and mesh port (%i) may not be the same", config.broadcast_port, config.mesh_port
         )
         raise ValueError(
-            f"Broadcast port ({config.broadcast_port}) and " f"mesh port ({config.mesh_port}) may not be the same"
+            f"Broadcast port ({config.broadcast_port}) and mesh port ({config.mesh_port}) may not be the same"
         )
 
     return config
