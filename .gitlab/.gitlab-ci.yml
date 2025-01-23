@@ -68,7 +68,7 @@ Rebuild Image:
     - echo $NAME
     - docker build -t snowsignal snowsignal
     - docker login https://harbor.stfc.ac.uk -u $DOCKER_REG_NAME --password $DOCKER_REG_TOKEN
-    - echo Build Identifiers - ${NAME}:$DOCKER_TAG
+    - echo "Build Identifiers - name=${NAME} tag=${DOCKER_TAG} pipargs=${PIPARGS}" 
     - docker build --build-arg ${PIPARGS} -t harbor.stfc.ac.uk/isis-accelerator-controls/snowsignal:$DOCKER_TAG snowsignal
     - docker push harbor.stfc.ac.uk/isis-accelerator-controls/snowsignal:$DOCKER_TAG
 
