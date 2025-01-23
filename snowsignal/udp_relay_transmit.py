@@ -252,7 +252,7 @@ class UDPRelayTransmit:
                             raise
 
                 # Send to other relays
-                # await self._send_to_relays_packet(packet)
+                await self._send_to_relays_packet(packet)
                 self._loop_forever = self._continue_while_loop()
 
     def _continue_while_loop(self) -> bool:
