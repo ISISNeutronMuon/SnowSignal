@@ -204,7 +204,7 @@ class UDPRelayTransmit:
                     # decoding operations when we're not debugging
                     if packet.udp_length and packet.udp_length >= 8:
                         pvamgshdr = PVAccessMessageHeader(packet.get_udp_payload()[0:8])
-                        logger.info("%s from %s", pvamgshdr.message_command.name, packet.ip_src_addr)
+                        logger.info("Received %s from %s", pvamgshdr.message_command.name, packet.ip_src_addr)
 
                 # Send to other relays
                 await self._send_to_relays_packet(packet)
