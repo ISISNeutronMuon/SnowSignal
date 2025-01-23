@@ -62,6 +62,8 @@ Rebuild Image:
     - if: $CI_COMMIT_BRANCH == "dev"
       variables:
         PIPARGS: "--pre"
+      when: on_success
+    - when: on_success
   services:
     - docker:dind
   script:
