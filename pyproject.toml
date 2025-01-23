@@ -33,12 +33,12 @@ Repository = "https://gitlab.stfc.ac.uk/isis-accelerator-controls/playground/iva
 [project.optional-dependencies]
 test = [
   "scapy~=2.0",
-  "ruff>0.6",
+  "ruff>0.9",
   "coverage>=7.6"
 ]
 dist = [
   "build>=1.2",
-  "twine>=5.1",
+  "twine>=6.1",
 ]
 
 [build-system]
