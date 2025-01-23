@@ -1,0 +1,169 @@
+name: Publish Python 🐍 distribution 📦 to PyPI and TestPyPI
+
+on: push
+
+jobs:
+  lint:
+    name: Use Ruff to perform linting, formatting, and other code quality tests
+    runs-on: ubuntu-latest 
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.x"
+    - run: pip install .[test]
+    - run: | 
+        ruff check --no-fix
+        ruff format --diff
+
+  # There's an oddity here I've only been able to inelegantly resolve
+  # The tests need to open sockets but don't have permissions to do so.
+  # I haven't figured out how to do so. To resolve this they need to 
+  # use sudo but that affects the pip install and we have to manually
+  # identify the versions of pip and python to install.
+  test:
+    name: Run tests on multiple Python versions
+    needs:
+    - lint
+    strategy:
+      matrix:
+        os: [ubuntu-latest] #, mac-latest]
+        python-version: ["3.11", "3.12"]
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        pip install .[test]
+        PIP_PATH=$(which pip)
+        sudo $PIP_PATH install .[test]
+    - name: Run tests
+      run: |
+        PYTHON_PATH=$(which python)
+        sudo $PYTHON_PATH -m coverage run --source=. -m unittest discover tests/
+    - name: Gather coverage statistics
+      if: ${{ always() }}
+      run: |
+        coverage report -m
+        coverage xml
+    - name: Upload pytest test results
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-results-${{ matrix.os }}-${{ matrix.python-version }}
+        path: coverage.xml
+      # Use always() to always run this step to publish test results when there are test failures
+
+  build:
+    name: Build distribution 📦
+    needs: 
+    - test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Needed to fetch the tags
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.x"
+    - name: Install build tools
+      run: >-
+        pip install .[dist]
+    - name: Build a binary wheel and a source tarball
+      run: python -m build
+    - name: Store the distribution packages
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+
+  publish-to-pypi:
+    name: >-
+      Publish Python 🐍 distribution 📦 to PyPI
+    if: startsWith(github.ref, 'refs/tags/')  # only publish to PyPI on tag pushes
+    needs:
+    - build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/SnowSignal
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+    - name: Publish distribution 📦 to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-to-testpypi:
+    name: Publish Python 🐍 distribution 📦 to TestPyPI
+    needs:
+    - build
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/SnowSignal
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+    - name: Publish distribution 📦 to TestPyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+
+  github-release:
+    name: >-
+      Sign the Python 🐍 distribution 📦 with Sigstore
+      and upload them to GitHub Release
+    needs:
+    - publish-to-pypi
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write  # IMPORTANT: mandatory for making GitHub Releases
+      id-token: write  # IMPORTANT: mandatory for sigstore
+
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+    - name: Sign the dists with Sigstore
+      uses: sigstore/gh-action-sigstore-python@v2.1.1
+      with:
+        inputs: >-
+          ./dist/*.tar.gz
+          ./dist/*.whl
+    - name: Create GitHub Release
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: >-
+        gh release create
+        '${{ github.ref_name }}'
+        --repo '${{ github.repository }}'
+        --notes ""
+    - name: Upload artifact signatures to GitHub Release
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      # Upload to GitHub Release using the `gh` CLI.
+      # `dist/` contains the built packages, and the
+      # sigstore-produced signatures and certificates.
+      run: >-
+        gh release upload
+        '${{ github.ref_name }}' dist/**
+        --repo '${{ github.repository }}'

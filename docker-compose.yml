@@ -6,7 +6,7 @@ services:
     environment:
       SERVICENAME: '{{.Service.Name}}'
     networks:
-      - snowsignal-test
+      - controls
     deploy: 
       mode: global
       placement:

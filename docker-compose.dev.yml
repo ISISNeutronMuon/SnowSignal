@@ -7,7 +7,7 @@ services:
       SERVICENAME: '{{.Service.Name}}'
       LOGLEVEL: 'debug'
     networks:
-      - snowsignal-test
+      - controls
     deploy: 
       mode: global
       placement:
@@ -16,7 +16,7 @@ services:
   probe:
     image: harbor.stfc.ac.uk/isis-accelerator-controls/internal-pvagw-tests
     networks:
-      - snowsignal-test
+      - controls
     deploy: 
       mode: global
       placement:
@@ -24,5 +24,5 @@ services:
     command: ["sleep", "infinity"]
 
 networks:
-  snowsignal-test:
+  controls:
     external: true
