@@ -224,7 +224,8 @@ class UDPRelayTransmit:
                                 case PVAccessMessageType.BEACON:
                                     pvabeaconmsg = PVAccessBeaconMessage(packet.get_udp_payload()[10:])
                                     logger.info(
-                                        "BEACON source self-identifies as %s %s:%i:%s with update counters beacon:%i, PVs:%i",
+                                        "BEACON source (%s) self-identifies as %s %s:%i:%s with update counters beacon:%i, PVs:%i",
+                                        packet.ip_src_addr,
                                         pvabeaconmsg.protocol,
                                         pvabeaconmsg.server_address,
                                         pvabeaconmsg.server_port,
@@ -233,9 +234,13 @@ class UDPRelayTransmit:
                                         pvabeaconmsg.change_count,
                                     )
                                 case PVAccessMessageType.SEARCH_REQUEST:
-                                    pvasearchmsg = PVAccessSearchMessage(packet.get_udp_payload()[8:])
+                                    try:
+                                        pvasearchmsg = PVAccessSearchMessage(packet.get_udp_payload()[8:])
+                                    except BadPacketException:
+                                        pvasearchmsg = PVAccessSearchMessage(packet.get_udp_payload()[10:])
                                     logger.info(
-                                        "SEARCH_REQUEST source self-identifies as %s:%i (seq id %i) with protocols %s searching for %s",
+                                        "SEARCH_REQUEST source (%s) self-identifies as %s:%i (seq id %i) with protocols %s searching for %s",
+                                        packet.ip_src_addr,
                                         pvasearchmsg.reponse_address,
                                         pvasearchmsg.response_port,
                                         pvasearchmsg.search_sequence_id,
@@ -249,7 +254,7 @@ class UDPRelayTransmit:
                         except BadPacketException:
                             # Ignore packets we can't decode
                             logger.debug("Packet not decoded; invalid or malformed PVAccess Protocol?")
-                            print("Bad packet PVAccess?: %s", packet.get_udp_payload()[8:])
+                            print(f"Bad PVAccess packet from {packet.ip_src_addr}: {packet.get_udp_payload()[8:]}")
 
                 # Send to other relays
                 await self._send_to_relays_packet(packet)
