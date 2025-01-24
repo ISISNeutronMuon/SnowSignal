@@ -1,6 +1,7 @@
 """SnowSignal - UDP Broadcast Relay"""
 
 import asyncio
+import importlib.metadata
 import ipaddress
 import logging
 import os
@@ -89,7 +90,7 @@ async def main(argv: Sequence[str] | None = None, loop_forever: bool = True):
 
     # Configure this relay
     config = configure(argv)
-    logger.info("Starting with configuration %s", config)
+    logger.info("Starting version %s with configuration %s", importlib.metadata.version("snowsignal"), config)
 
     # Get the local IP address
     # TODO: Properly support IPv6
