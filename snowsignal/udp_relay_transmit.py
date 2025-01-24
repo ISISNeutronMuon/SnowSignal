@@ -249,7 +249,7 @@ class UDPRelayTransmit:
                         except BadPacketException:
                             # Ignore packets we can't decode
                             logger.debug("Packet not decoded; invalid or malformed PVAccess Protocol?")
-                            raise
+                            print("Bad packet PVAccess?: %s", packet.get_udp_payload()[8:])
 
                 # Send to other relays
                 await self._send_to_relays_packet(packet)
