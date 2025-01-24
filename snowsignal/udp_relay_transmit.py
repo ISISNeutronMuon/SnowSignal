@@ -235,6 +235,7 @@ class UDPRelayTransmit:
                                     )
                                 case PVAccessMessageType.SEARCH_REQUEST:
                                     try:
+                                        # Seems to work for pvxs and Phoebus sources
                                         pvasearchmsg = PVAccessSearchMessage(packet.get_udp_payload()[8:])
                                     except BadPacketException:
                                         pvasearchmsg = PVAccessSearchMessage(packet.get_udp_payload()[10:])
