@@ -17,7 +17,7 @@ from typing import Any
 from .configure import ConfigArgs
 from .netutils import get_broadcast_from_iface, get_macaddress_from_iface
 from .packet import Packet
-from .pva_packet import log_pvaccess, log_pvaccess_packet
+from .pva_packet import log_pvaccess
 
 logger = logging.getLogger(__name__)
 

@@ -2,7 +2,6 @@
 
 import dataclasses
 import logging
-import sys
 from enum import Enum, unique
 from struct import unpack
 
