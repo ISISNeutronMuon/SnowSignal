@@ -21,15 +21,8 @@ from collections.abc import Sequence
 
 from .configure import ConfigArgs
 from .netutils import get_localhost_macs, human_readable_mac, identify_pkttype, machine_readable_mac
-from .packet import (
-    BadPacketException,
-    EthernetProtocol,
-    Packet,
-    PVAccessBeaconMessage,
-    PVAccessMessageHeader,
-    PVAccessMessageType,
-    PVAccessSearchMessage,
-)
+from .packet import BadPacketException, EthernetProtocol, Packet
+from .pva_packet import log_pvaccess_packet
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +113,7 @@ class UDPRelayTransmit:
         # Do not process packets sourced from this machine
         if packet.eth_src_mac in self._macs:
             logger.debug("Source is a local MAC")
-            # return False
+            return False
 
         return True
 
@@ -210,52 +203,7 @@ class UDPRelayTransmit:
                 # Use this unusual conditional in order to avoid expensive
                 # decoding operations when we're not debugging
                 if logger.isEnabledFor(logging.INFO):
-                    # Check packet is minimum length to support a PVAccess protocol header
-                    if packet.udp_length and packet.udp_length >= 8:
-                        try:
-                            pvamgshdr = PVAccessMessageHeader(packet.get_udp_payload()[0:8])
-                            logger.info(
-                                "Received %s from %s",
-                                pvamgshdr.message_command.name,
-                                packet.ip_src_addr,
-                            )
-
-                            match pvamgshdr.message_command:
-                                case PVAccessMessageType.BEACON:
-                                    pvabeaconmsg = PVAccessBeaconMessage(packet.get_udp_payload()[10:])
-                                    logger.info(
-                                        "BEACON source (%s) self-identifies as %s %s:%i:%s with update counters beacon:%i, PVs:%i",
-                                        packet.ip_src_addr,
-                                        pvabeaconmsg.protocol,
-                                        pvabeaconmsg.server_address,
-                                        pvabeaconmsg.server_port,
-                                        pvabeaconmsg.guid,
-                                        pvabeaconmsg.beacon_sequence_id,
-                                        pvabeaconmsg.change_count,
-                                    )
-                                case PVAccessMessageType.SEARCH_REQUEST:
-                                    try:
-                                        # Seems to work for pvxs and Phoebus sources
-                                        pvasearchmsg = PVAccessSearchMessage(packet.get_udp_payload()[8:])
-                                    except BadPacketException:
-                                        pvasearchmsg = PVAccessSearchMessage(packet.get_udp_payload()[10:])
-                                    logger.info(
-                                        "SEARCH_REQUEST source (%s) self-identifies as %s:%i (seq id %i) with protocols %s searching for %s",
-                                        packet.ip_src_addr,
-                                        pvasearchmsg.reponse_address,
-                                        pvasearchmsg.response_port,
-                                        pvasearchmsg.search_sequence_id,
-                                        pvasearchmsg.protocols,
-                                        pvasearchmsg.channels,
-                                    )
-                                case _:
-                                    # Currently unsupported / unexpected
-                                    pass
-
-                        except BadPacketException:
-                            # Ignore packets we can't decode
-                            logger.debug("Packet not decoded; invalid or malformed PVAccess Protocol?")
-                            print(f"Bad PVAccess packet from {packet.ip_src_addr}: {packet.get_udp_payload()[8:]}")
+                    log_pvaccess_packet(packet)
 
                 # Send to other relays
                 await self._send_to_relays_packet(packet)

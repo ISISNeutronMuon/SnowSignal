@@ -16,6 +16,8 @@ from typing import Any
 
 from .configure import ConfigArgs
 from .netutils import get_broadcast_from_iface, get_macaddress_from_iface
+from .packet import Packet
+from .pva_packet import log_pvaccess, log_pvaccess_packet
 
 logger = logging.getLogger(__name__)
 
@@ -155,6 +157,21 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         # TODO: We should be using self.transport.sendto() in order to make
         # this asynchronous but unfortunately that wouldn't allow us to
         # control the IP headers. Is there another way to resolve that?
+
+        # Use this unusual conditional in order to avoid expensive
+        # decoding operations when we're not debugging
+        if logger.isEnabledFor(logging.INFO):
+            # Construct a fake ethernet header so we can decode the IP address using existing
+            # functionality. This will only work if the original source used IPv4.
+            # TODO: This indicates a flaw in the current logic. The received broadcast and the
+            # rebroadcast must use the same IP version (IPv4 or IPv6) or the message will
+            # be mangled
+            packet = Packet(b"\xff\xff\xff\xff\xff\xff\x02B\xac\x16\x00\x02\x08\x00" + data)
+            packet.decode_ip()
+            packet.decode_udp()
+            packet_src_ip = packet.ip_src_addr
+
+            log_pvaccess(data[28:], packet_src_ip)
 
         # Finally broadcast the new packet
         # It doesn't feel much simpler but we're not using fully raw sockets here

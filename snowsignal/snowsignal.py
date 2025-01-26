@@ -90,7 +90,10 @@ async def main(argv: Sequence[str] | None = None, loop_forever: bool = True):
 
     # Configure this relay
     config = configure(argv)
-    logger.info("Starting version %s with configuration %s", importlib.metadata.version("snowsignal"), config)
+    try:
+        logger.info("Starting version %s with configuration %s", importlib.metadata.version("snowsignal"), config)
+    except importlib.metadata.PackageNotFoundError:
+        logger.info("Starting local version with configuration %s", config)
 
     # Get the local IP address
     # TODO: Properly support IPv6
