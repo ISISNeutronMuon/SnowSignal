@@ -6,6 +6,6 @@ ARG PIPARGS=
 
 # Token has read_api and read_repository permissions and so does not need to be kept secret
 # However it will expire
-RUN pip install SnowSignal ${PIPARGS} --index-url https://gitlab.stfc.ac.uk/api/v4/projects/5671/packages/pypi/simple 
+RUN pip install SnowSignal ${PIPARGS} --no-cache-dir --index-url https://gitlab.stfc.ac.uk/api/v4/projects/5671/packages/pypi/simple 
 
 CMD ["python", "-m", "snowsignal"]
