@@ -2,6 +2,8 @@
 
 import dataclasses
 import logging
+import struct
+import traceback
 from enum import Enum, unique
 from struct import unpack
 
@@ -207,27 +209,34 @@ class PVAccessSearchMessage:
             # Get list of channels. This is an array of structs, where the structs are an integers identifier
             # and a channel name string
             self.channels: list[self.Channel] = []
-            for x in range(channels_count):
-                # Some implementations get the channel count wrong by using local endianness instead of
-                # network endianness. We have to check if there really is more data. Note, we could still
-                # undercount the amount of data. Do other implementations just ignore the count and use
-                # a while loop, I wonder?
-                if payload_pointer + 4 > len(msg_payload):
-                    logger.debug("Malformed channel counter")
-                    break
+            # Some implementations get the channel count wrong by using local endianness instead of
+            # network endianness. We have to handle there unexpectedly being no data. Note, we could still
+            # undercount the amount of data. Do other implementations just ignore the count and use
+            # a while loop, I wonder?
+            try:
+                for x in range(channels_count):
+                    # Get search instance ID
+                    chans_unpacked = unpack("!I", msg_payload[payload_pointer : payload_pointer + 4])
+                    search_instance_id = chans_unpacked[0]
+                    payload_pointer = payload_pointer + 4
 
-                # Get search instance ID
-                chans_unpacked = unpack("!I", msg_payload[payload_pointer : payload_pointer + 4])
-                search_instance_id = chans_unpacked[0]
-                payload_pointer = payload_pointer + 4
+                    # Get channelname string
+                    (channame_string, payload_pointer) = decode_pvaccess_string(msg_payload, payload_pointer)
 
-                # Get channelname string
-                (channame_string, payload_pointer) = decode_pvaccess_string(msg_payload, payload_pointer)
-
-                self.channels.append(self.Channel(search_instance_id, channame_string))
+                    self.channels.append(self.Channel(search_instance_id, channame_string))
+            except struct.error:
+                logger.debug(
+                    "Unexpected termination of search channel array, probable malformed channel count (endianess?)"
+                )
+                logger.debug(
+                    "%s, channels_count: %i no_channels_found: %i channels_found: %s",
+                    self,
+                    channels_count,
+                    len(self.channels),
+                    self.channels,
+                )
 
         except Exception as e:
-            logger.info("%s %i %i %s", self, channels_count, len(self.channels), self.channels)
             raise BadPacketException from e
 
 
@@ -276,9 +285,9 @@ def log_pvaccess(payload: bytes, packet_src_ip: str | None, source: str = "Rebro
 
     except BadPacketException:
         # Ignore packets we can't decode
-        logger.debug("Packet not decoded; invalid or malformed PVAccess Protocol?")
-        print(f"Bad PVAccess packet from {packet_src_ip}: {payload}")
-        raise
+        logger.info("Packet not decoded; invalid or malformed PVAccess Protocol?")
+        logger.info("Bad PVAccess packet from %s : %s", packet_src_ip, payload)
+        logging.error(traceback.format_exc())
 
 
 def log_pvaccess_packet(packet: Packet) -> None:
