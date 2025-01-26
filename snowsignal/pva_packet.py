@@ -2,6 +2,7 @@
 
 import dataclasses
 import logging
+import traceback
 from enum import Enum, unique
 from struct import unpack
 
@@ -276,9 +277,9 @@ def log_pvaccess(payload: bytes, packet_src_ip: str | None, source: str = "Rebro
 
     except BadPacketException:
         # Ignore packets we can't decode
-        logger.debug("Packet not decoded; invalid or malformed PVAccess Protocol?")
-        print(f"Bad PVAccess packet from {packet_src_ip}: {payload}")
-        raise
+        logger.info("Packet not decoded; invalid or malformed PVAccess Protocol?")
+        logger.info("Bad PVAccess packet from %s : %s", packet_src_ip, payload)
+        logging.error(traceback.format_exc())
 
 
 def log_pvaccess_packet(packet: Packet) -> None:
