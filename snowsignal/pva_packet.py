@@ -5,7 +5,7 @@ import logging
 import socket
 import struct
 import traceback
-from enum import Enum, IntEnum, unique, auto
+from enum import Enum, IntEnum, unique
 from struct import unpack
 
 from .packet import BadPacketException, Packet
@@ -36,9 +36,11 @@ class PVAccessMessageType(Enum):
     CHANNEL_RPC = 0x14
     CANCEL_REQUEST = 0x15
 
+
 @unique
 class Endianness(IntEnum):
     """Endianness of message"""
+
     LITTLEEND = 0
     BIGEND = 1
 
@@ -52,8 +54,8 @@ class Endianness(IntEnum):
                 return ">"
             case _:
                 raise IndexError("Unknown / Impossible Endianness")
-        
-        
+
+
 @dataclasses.dataclass
 class PVAccessMessageHeader:
     """PVAccess Message Header decoder"""
@@ -61,12 +63,14 @@ class PVAccessMessageHeader:
     @unique
     class MessageType(IntEnum):
         """Message header is type application or control"""
+
         APPLICATION = 0
         CONTROL = 1
 
     @unique
     class Segmentation(Enum):
         """Message is segmented, and what type of segment"""
+
         NOT_SEGMENTED = 0
         SEGMENT_START = 1
         SEGMENT_MIDDLE = 2
@@ -75,6 +79,7 @@ class PVAccessMessageHeader:
     @unique
     class Role(IntEnum):
         """Message is from a client or server"""
+
         CLIENT = 0
         SERVER = 1
 
@@ -82,10 +87,10 @@ class PVAccessMessageHeader:
 
     magic: int
     version: int
-    type : MessageType
-    segmented : Segmentation
-    role : Role
-    endian : Endianness
+    msgtype: MessageType
+    segmented: Segmentation
+    role: Role
+    endian: Endianness
     message_command: PVAccessMessageType
     payload_size: int
 
@@ -100,7 +105,7 @@ class PVAccessMessageHeader:
             # Decode the first four bytes of the header
             # This also serves as a loose confirmation that this is a PVAccess protocol message
             # due to the magic bytes. Due to chance we'll only try to process mistakenly one
-            # in 256 times 
+            # in 256 times
             pvh = unpack("BBBB", msg_header[0:4])
             if pvh[0] != 0xCA:
                 logger.debug("Magic bytes were %s instead of 0xCA", hex(pvh[0]))
@@ -109,25 +114,24 @@ class PVAccessMessageHeader:
             self.magic = pvh[0]
             self.version = pvh[1]
             self.message_command = PVAccessMessageType(pvh[3])
-            
+
             # Flags are packed in individual bits, or in one case a pair of bits, within a single byte
             # We need to know the endianness to decode the integer that follows
             flags = int(pvh[2])
-            self.type = self.MessageType(flags & 1)
-            self.segmented = self.Segmentation( (flags >> 4) & 0b11 )
-            self.role = self.Role( (flags >> 6) & 1 )
-            self.endian = Endianness( (flags >> 7) & 1 )
+            self.msgtype = self.MessageType(flags & 1)
+            self.segmented = self.Segmentation((flags >> 4) & 0b11)
+            self.role = self.Role((flags >> 6) & 1)
+            self.endian = Endianness((flags >> 7) & 1)
 
             # Payload size
             pvhsize = unpack(f"{self.endian.unpack_char()}I", msg_header[4:8])
             self.payload_size = pvhsize[0]
 
-
         except Exception as e:
             raise BadPacketException from e
 
 
-def decode_pvaccess_size(payload: bytes, endianness : Endianness, start_byte: int = 0) -> tuple[int, int]:
+def decode_pvaccess_size(payload: bytes, endianness: Endianness, start_byte: int = 0) -> tuple[int, int]:
     """Decode a string or array size in the PVAccess Protocol format.
     We require a set of bytes to decode and optionally where in the bytes to start. This means that
     part of a message payload starting at the size or the entire payload with a pointer to the start
@@ -155,7 +159,7 @@ def decode_pvaccess_size(payload: bytes, endianness : Endianness, start_byte: in
     return (pvasize, start_byte + bytes_for_decode)
 
 
-def decode_pvaccess_string(payload: bytes, endianness : Endianness, start_byte: int = 0) -> tuple[str, int]:
+def decode_pvaccess_string(payload: bytes, endianness: Endianness, start_byte: int = 0) -> tuple[str, int]:
     """Decode a PVAccess Protocol string"""
 
     # First get the length of the string
@@ -182,7 +186,7 @@ class PVAccessBeaconMessage:
     server_port: int
     protocol: str
 
-    def __init__(self, raw: bytes, endianness : Endianness) -> None:
+    def __init__(self, raw: bytes, endianness: Endianness) -> None:
         """Decode beacon message payload"""
 
         self.raw = raw
@@ -231,7 +235,7 @@ class PVAccessSearchMessage:
     def __repr__(self) -> str:
         return f"sid: {self.search_sequence_id} flags: {self.flags} raddr: {self.reponse_address} rport: {self.response_port} protos: {self.protocols}"
 
-    def __init__(self, raw: bytes, endianness : Endianness) -> None:
+    def __init__(self, raw: bytes, endianness: Endianness) -> None:
         """Decode search message payload"""
 
         self.raw = raw
@@ -281,7 +285,9 @@ class PVAccessSearchMessage:
                     payload_pointer = payload_pointer + 4
 
                     # Get channelname string
-                    (channame_string, payload_pointer) = decode_pvaccess_string(msg_payload, endianness, payload_pointer)
+                    (channame_string, payload_pointer) = decode_pvaccess_string(
+                        msg_payload, endianness, payload_pointer
+                    )
 
                     self.channels.append(self.Channel(search_instance_id, channame_string))
             except struct.error:
@@ -308,7 +314,7 @@ def log_pvaccess(payload: bytes, packet_src_ip: str | None, source: str = "Rebro
             source,
             pvamgshdr.message_command.name,
             pvamgshdr.version,
-            pvamgshdr.type.name,
+            pvamgshdr.msgtype.name,
             pvamgshdr.segmented.name,
             pvamgshdr.role.name,
             pvamgshdr.endian.name,
