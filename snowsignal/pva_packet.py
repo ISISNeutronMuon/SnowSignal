@@ -309,6 +309,11 @@ class PVAccessSearchMessage:
 def log_pvaccess(payload: bytes, packet_src_ip: str | None, source: str = "Rebroadcasting") -> None:
     try:
         pvamgshdr = PVAccessMessageHeader(payload)
+        try:
+            srcname = socket.gethostbyaddr(packet_src_ip)[0] if packet_src_ip else "Unknown"
+        except socket.herror:
+            srcname = "Unknown"
+
         logger.info(
             "%s %s (v%i) [Flags: %s,%s,%s,%s] from %s --> %s",
             source,
@@ -319,7 +324,7 @@ def log_pvaccess(payload: bytes, packet_src_ip: str | None, source: str = "Rebro
             pvamgshdr.role.name,
             pvamgshdr.endian.name,
             packet_src_ip,
-            socket.gethostbyaddr(packet_src_ip)[0] if packet_src_ip else "Unknown",
+            srcname,
         )
 
         pva_message = payload[8:]
