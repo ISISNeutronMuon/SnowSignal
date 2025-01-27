@@ -2,6 +2,7 @@
 
 import dataclasses
 import logging
+import socket
 import struct
 import traceback
 from enum import Enum, unique
@@ -244,11 +245,12 @@ def log_pvaccess(payload: bytes, packet_src_ip: str | None, source: str = "Rebro
     try:
         pvamgshdr = PVAccessMessageHeader(payload)
         logger.info(
-            "%s %s (v%i) from %s",
+            "%s %s (v%i) from %s --> %s",
             source,
             pvamgshdr.message_command.name,
             pvamgshdr.version,
             packet_src_ip,
+            socket.gethostbyaddr(packet_src_ip)[0] if packet_src_ip else "Unknown",
         )
 
         pva_message = payload[8:]
