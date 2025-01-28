@@ -273,10 +273,6 @@ class PVAccessSearchMessage:
             # Get list of channels. This is an array of structs, where the structs are an integers identifier
             # and a channel name string
             self.channels: list[self.Channel] = []
-            # Some implementations get the channel count wrong by using local endianness instead of
-            # network endianness. We have to handle there unexpectedly being no data. Note, we could still
-            # undercount the amount of data. Do other implementations just ignore the count and use
-            # a while loop, I wonder?
             try:
                 for x in range(channels_count):
                     # Get search instance ID
@@ -292,7 +288,7 @@ class PVAccessSearchMessage:
                     self.channels.append(self.Channel(search_instance_id, channame_string))
             except struct.error:
                 logger.debug(
-                    "Unexpected termination of search channel array, probable malformed channel count (endianess?)"
+                    "Unexpected termination of search channel array, possible truncated packet or malformed channel count"
                 )
                 logger.debug(
                     "%s, channels_count: %i no_channels_found: %i channels_found: %s",
@@ -307,6 +303,7 @@ class PVAccessSearchMessage:
 
 
 def log_pvaccess(payload: bytes, packet_src_ip: str | None, source: str = "Rebroadcasting") -> None:
+    """Details of a PVAccess message payload"""
     try:
         pvamgshdr = PVAccessMessageHeader(payload)
         try:
@@ -367,6 +364,7 @@ def log_pvaccess(payload: bytes, packet_src_ip: str | None, source: str = "Rebro
 
 
 def log_pvaccess_packet(packet: Packet) -> None:
+    """Details of a PVAccess message packet"""
     # Check packet is minimum length to support a PVAccess protocol header
     if packet.udp_length and packet.udp_length >= 8:
         payload = packet.get_udp_payload()
