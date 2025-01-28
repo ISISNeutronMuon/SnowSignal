@@ -62,6 +62,15 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         # What does connection lost even mean for UDP?
         # Seems only necessary to stop some spurious errors on server shutdown
 
+    def recalculate_udp_size(self, ip_packet) -> bytes:
+        """Calculate UDP size"""
+        udp_packet = ip_packet[20:]
+        udp_packet_length = len(udp_packet)
+
+        ip_packet = ip_packet[:24] + udp_packet_length.to_bytes(2, "big") + ip_packet[26:]
+
+        return ip_packet
+
     def recalculate_udp_checksum(self, ip_packet) -> bytes:
         """Calculate UDP checksum, using the IP and UDP parts of the packet,
         and change the existing packet UDP checksum with the newly calculcated
@@ -140,6 +149,7 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         # We can't use the data as is for some reason but need to recalculate the
         # UDP checksum. We also remove the ethernet frame as the sendto() below
         # will take care of that part
+        data = self.recalculate_udp_size(data[14:])
         data = self.recalculate_udp_checksum(data[14:])
 
         # TODO: The code above does not change the IP source address
