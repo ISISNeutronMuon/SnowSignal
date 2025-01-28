@@ -39,8 +39,8 @@ class TestUDPRelayTransmitMethods(unittest.IsolatedAsyncioTestCase):
 
         return udp_relay_transmit.Packet(scapy.compat.raw(packet))
 
-    @patch("asyncio.SelectorEventLoop.sock_sendto")
-    async def test_send_to_relays_packet(self, socket_sendto_mock: unittest.mock.AsyncMock):
+    # TODO: Add test for sock_sendto returns different size
+    async def test_send_to_relays_packet(self):  # , socket_sendto_mock: unittest.mock.AsyncMock):
         """Test sending rebroadcast packets to remote relays"""
 
         remote_relays = [ipaddress.IPv4Address("127.0.0.1"), ipaddress.IPv6Address("fe80::e910:b9ea:1399:5300%27")]
@@ -48,7 +48,8 @@ class TestUDPRelayTransmitMethods(unittest.IsolatedAsyncioTestCase):
         transmitter = udp_relay_transmit.UDPRelayTransmit(remote_port=9999, remote_relays=remote_relays)
 
         test_packet = self._create_unicast_test_packet()
-        await transmitter._send_to_relays_packet(test_packet)  # pylint: disable=protected-access
+        with patch("asyncio.SelectorEventLoop.sock_sendto", return_value=len(test_packet.raw)) as socket_sendto_mock:
+            await transmitter._send_to_relays_packet(test_packet)  # pylint: disable=protected-access
 
         self.assertEqual(
             socket_sendto_mock.call_count,
