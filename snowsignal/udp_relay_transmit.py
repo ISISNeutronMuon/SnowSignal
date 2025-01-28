@@ -90,7 +90,13 @@ class UDPRelayTransmit:
             with socket.socket(sock_family, socket.SOCK_DGRAM) as s:
                 s.setblocking(False)
                 loop = asyncio.get_running_loop()
-                await loop.sock_sendto(s, msgbytes, (str(remote_relay), self.remote_port))
+                bytessent = await loop.sock_sendto(s, msgbytes, (str(remote_relay), self.remote_port))
+                if bytessent < len(msgbytes):
+                    logger.warning(
+                        "Sent truncated message to other SnowSignal nodes; was %i, should be %i",
+                        bytessent,
+                        len(msgbytes),
+                    )
 
     def l1filter(self, ifname: str) -> bool:
         """Check the network interface is as expected"""
