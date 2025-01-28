@@ -161,7 +161,7 @@ class UDPRelayTransmit:
             while self._loop_forever:
                 loop = asyncio.get_running_loop()
 
-                raw_packet = await loop.sock_recvfrom(sock, 1024)
+                raw_packet = await loop.sock_recvfrom(sock, 65536)
                 (ifname, proto, pkttype, hatype, addr) = raw_packet[1]
                 raw_packet = raw_packet[0]
                 logger.debug(
