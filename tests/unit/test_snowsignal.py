@@ -3,6 +3,8 @@
 import asyncio
 import logging
 import os
+import random
+import string
 import unittest
 import unittest.mock
 from unittest.mock import patch
@@ -27,7 +29,8 @@ class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
     """Test the asynch functions in snowsignal.py"""
 
     def setUp(self):
-        self._test_payload = b"test_payload"
+        # Observed PVAccess behavious shows that searches for multiple channels top out at just under 1500 bytes
+        self._test_payload = b"test_payload" + "".join(random.choices(string.ascii_lowercase, k=1450)).encode("utf8")
 
     def _create_broadcast_test_packet(self, src) -> scapy.packet.Packet:
         packet = (
