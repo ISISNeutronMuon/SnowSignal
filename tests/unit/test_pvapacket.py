@@ -1,6 +1,7 @@
 import logging
 import unittest
 from struct import pack
+from unittest.mock import patch
 
 from snowsignal.packet import BadPacketException, Packet
 from snowsignal.pva_packet import (
@@ -183,7 +184,8 @@ class TestPVAPacketLog(unittest.TestCase):
             captured_logs.records[0].getMessage(),
         )
 
-    def test_log_beacon_packet(self):
+    @patch("socket.gethostbyaddr", return_value=("example.com", [], []))
+    def test_log_beacon_packet(self, _):
         # Valid beacon packet
         beacon_packet = Packet(
             b"\xff\xff\xff\xff\xff\xff\x02B\xac\x16\x00\x03\x08\x00E\x00\x00K3\x15@\x00@\x11\xaf^\xac\x16\x00\x02\xac\x16\xff\xff\xc5\xfb\x13\xd4\x007\xd6V\xca\x02\xc0\x00\x00\x00\x00')\x9bb\xff\xf3\xa5\x9a\x8b\xd7\xc1\x00\xb9\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\x00\x00\x00\x00\x13\xd3\x03tcp\xff"
@@ -196,11 +198,12 @@ class TestPVAPacketLog(unittest.TestCase):
             log_pvaccess_packet(beacon_packet)
 
         self.assertEqual(
-            "Received BEACON (v2) [Flags: APPLICATION,NOT_SEGMENTED,SERVER,BIGEND] from 172.22.0.2 --> probe1.snowsignal_udptest1: self-identifies as tcp 00000000000000000000ffff00000000:5075;299b62fff3a59a8bd7c100b9 with update counters beacon:0, PVs:1",
+            "Received BEACON (v2) [Flags: APPLICATION,NOT_SEGMENTED,SERVER,BIGEND] from 172.22.0.2 --> example.com: self-identifies as tcp 00000000000000000000ffff00000000:5075;299b62fff3a59a8bd7c100b9 with update counters beacon:0, PVs:1",
             captured_logs.records[0].getMessage(),
         )
 
-    def test_log_search_packet(self):
+    @patch("socket.gethostbyaddr", return_value=("example.com", [], []))
+    def test_log_search_packet(self, _):
         # Valid search packet
         beacon_packet = Packet(
             b"\xff\xff\xff\xff\xff\xff\x02B\xac\x16\x00\x02\x08\x00E\x00\x00T\x17\x99@\x00@\x11\xca\xd1\xac\x16\x00\x02\xac\x16\xff\xff\xa0\x04\x13\xd4\x00@\xa7\x99\xca\x02\x80\x03\x00\x00\x000find\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xa0\x04\x01\x03tcp\x00\x01\x124Vx\nmy:pv:name"
@@ -213,7 +216,7 @@ class TestPVAPacketLog(unittest.TestCase):
             log_pvaccess_packet(beacon_packet)
 
         self.assertEqual(
-            "Received SEARCH_REQUEST (v2) [Flags: APPLICATION,NOT_SEGMENTED,CLIENT,BIGEND] from 172.22.0.2 --> probe1.snowsignal_udptest1: self-identifies as 00000000000000000000000000000000:40964 (seq id 1718185572) with protocols ['tcp'] searching for [305419896 / my:pv:name]",
+            "Received SEARCH_REQUEST (v2) [Flags: APPLICATION,NOT_SEGMENTED,CLIENT,BIGEND] from 172.22.0.2 --> example.com: self-identifies as 00000000000000000000000000000000:40964 (seq id 1718185572) with protocols ['tcp'] searching for [305419896 / my:pv:name]",
             captured_logs.records[0].getMessage(),
         )
 
