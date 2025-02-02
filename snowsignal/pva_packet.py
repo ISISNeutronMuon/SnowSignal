@@ -1,4 +1,7 @@
-"""Decode and understand PVAccess Protocol packets"""
+"""
+Decode and understand PVAccess Protocol packets
+Protocol specification is available here: https://docs.epics-controls.org/en/latest/pv-access/protocol.html
+"""
 
 import dataclasses
 import logging
@@ -58,7 +61,10 @@ class Endianness(IntEnum):
 
 @dataclasses.dataclass
 class PVAccessMessageHeader:
-    """PVAccess Message Header decoder"""
+    """PVAccess Message Header decoder
+
+    https://docs.epics-controls.org/en/latest/pv-access/Protocol-Messages.html#message-header
+    """
 
     @unique
     class MessageType(IntEnum):
@@ -83,9 +89,9 @@ class PVAccessMessageHeader:
         CLIENT = 0
         SERVER = 1
 
-    raw: bytes
+    raw: bytes  # The raw original bytes of the header
 
-    magic: int
+    magic: int  # Must be 0xCA for PVAccess
     version: int
     msgtype: MessageType
     segmented: Segmentation
@@ -105,7 +111,8 @@ class PVAccessMessageHeader:
             # Decode the first four bytes of the header
             # This also serves as a loose confirmation that this is a PVAccess protocol message
             # due to the magic bytes. Due to chance we'll only try to process mistakenly one
-            # in 256 times
+            # in 256 times. We decode only the first four bytes initially because we need to
+            # know the endianness of the message
             pvh = unpack("BBBB", msg_header[0:4])
             if pvh[0] != 0xCA:
                 logger.debug("Magic bytes were %s instead of 0xCA", hex(pvh[0]))
@@ -123,7 +130,7 @@ class PVAccessMessageHeader:
             self.role = self.Role((flags >> 6) & 1)
             self.endian = Endianness((flags >> 7) & 1)
 
-            # Payload size
+            # Payload size, here we need to know the endianness
             pvhsize = unpack(f"{self.endian.unpack_char()}I", msg_header[4:8])
             self.payload_size = pvhsize[0]
 
@@ -133,6 +140,9 @@ class PVAccessMessageHeader:
 
 def decode_pvaccess_size(payload: bytes, endianness: Endianness, start_byte: int = 0) -> tuple[int, int]:
     """Decode a string or array size in the PVAccess Protocol format.
+
+    https://docs.epics-controls.org/en/latest/pv-access/Protocol-Encoding.html#sizes
+
     We require a set of bytes to decode and optionally where in the bytes to start. This means that
     part of a message payload starting at the size or the entire payload with a pointer to the start
     of the size may be passed in. We then return a tuple of the size and a pointer to the byte after
@@ -160,7 +170,14 @@ def decode_pvaccess_size(payload: bytes, endianness: Endianness, start_byte: int
 
 
 def decode_pvaccess_string(payload: bytes, endianness: Endianness, start_byte: int = 0) -> tuple[str, int]:
-    """Decode a PVAccess Protocol string"""
+    """
+    Decode a PVAccess Protocol string
+
+    https://docs.epics-controls.org/en/latest/pv-access/Protocol-Encoding.html#strings
+
+    This is basically an integer size specified in the usual PVAccess Protocol way
+    (see decode_pvaccess_size()) and then an array of UTF-8 bytes
+    """
 
     # First get the length of the string
     (pvastrlen, new_start_byte) = decode_pvaccess_size(payload, endianness, start_byte)
@@ -174,7 +191,11 @@ def decode_pvaccess_string(payload: bytes, endianness: Endianness, start_byte: i
 
 @dataclasses.dataclass
 class PVAccessBeaconMessage:
-    """PVAccess Beacon Message decode"""
+    """
+    PVAccess Beacon Message decode
+
+    https://docs.epics-controls.org/en/latest/pv-access/Protocol-Messages.html#cmd-beacon-0x00
+    """
 
     raw: bytes
 
@@ -212,7 +233,10 @@ class PVAccessBeaconMessage:
 
 @dataclasses.dataclass
 class PVAccessSearchMessage:
-    """PVAccess Beacon Message decode"""
+    """PVAccess Search Request Message decode
+
+    https://docs.epics-controls.org/en/latest/pv-access/Protocol-Messages.html#cmd-search-0x03
+    """
 
     raw: bytes
 
@@ -270,9 +294,10 @@ class PVAccessSearchMessage:
             )
             payload_pointer = payload_pointer + 2
 
-            # Get list of channels. This is an array of structs, where the structs are an integers identifier
-            # and a channel name string
-            self.channels: list[self.Channel] = []
+            # Get list of channels. This is an array of structs, where the structs are an integer identifier
+            # and a channel name string. We catch struct unpack exceptions because an earlier version of SnowSignal
+            # was rebroadcasting truncated strings
+            self.channels: list[PVAccessSearchMessage.Channel] = []
             try:
                 for x in range(channels_count):
                     # Get search instance ID
@@ -286,7 +311,7 @@ class PVAccessSearchMessage:
                     )
 
                     self.channels.append(self.Channel(search_instance_id, channame_string))
-            except struct.error:
+            except struct.error as e:
                 logger.debug(
                     "Unexpected termination of search channel array, possible truncated packet or malformed channel count"
                 )
@@ -297,31 +322,34 @@ class PVAccessSearchMessage:
                     len(self.channels),
                     self.channels,
                 )
+                raise BadPacketException from e
 
         except Exception as e:
             raise BadPacketException from e
 
 
 def log_pvaccess(payload: bytes, packet_src_ip: str | None, source: str = "Rebroadcasting") -> None:
-    """Details of a PVAccess message payload"""
+    """Log details of a PVAccess message payload"""
+    # We trap all BadPacketExceptions because
     try:
+        # Decode the PVAcccess Protocol message header
         pvamgshdr = PVAccessMessageHeader(payload)
-        try:
-            srcname = socket.gethostbyaddr(packet_src_ip)[0] if packet_src_ip else "Unknown"
-        except socket.herror:
-            srcname = "Unknown"
 
-        logger.info(
-            "%s %s (v%i) [Flags: %s,%s,%s,%s] from %s --> %s",
-            source,
-            pvamgshdr.message_command.name,
-            pvamgshdr.version,
-            pvamgshdr.msgtype.name,
-            pvamgshdr.segmented.name,
-            pvamgshdr.role.name,
-            pvamgshdr.endian.name,
-            packet_src_ip,
-            srcname,
+        # Construct a string describing the source for the later log messages
+        if packet_src_ip:
+            try:
+                # Try to determine the name of the source machine, but such a thing may not exist
+                srcname = socket.gethostbyaddr(packet_src_ip)[0] if packet_src_ip else "Unknown"
+                srcstring = f"{packet_src_ip} --> {srcname}"
+            except socket.herror:
+                srcstring = f"{packet_src_ip}"
+        else:
+            srcstring = "Unspecified"
+
+        messagehdr_str = (
+            f"{source} {pvamgshdr.message_command.name} (v{pvamgshdr.version}) "
+            f"[Flags: {pvamgshdr.msgtype.name},{pvamgshdr.segmented.name},{pvamgshdr.role.name},{pvamgshdr.endian.name}] "
+            f"from {srcstring}"
         )
 
         pva_message = payload[8:]
@@ -329,9 +357,8 @@ def log_pvaccess(payload: bytes, packet_src_ip: str | None, source: str = "Rebro
             case PVAccessMessageType.BEACON:
                 pvabeaconmsg = PVAccessBeaconMessage(pva_message, pvamgshdr.endian)
                 logger.info(
-                    "%s BEACON source (%s) self-identifies as %s %s:%i;%s with update counters beacon:%i, PVs:%i",
-                    source,
-                    packet_src_ip,
+                    "%s: self-identifies as %s %s:%i;%s with update counters beacon:%i, PVs:%i",
+                    messagehdr_str,
                     pvabeaconmsg.protocol,
                     pvabeaconmsg.server_address,
                     pvabeaconmsg.server_port,
@@ -343,9 +370,8 @@ def log_pvaccess(payload: bytes, packet_src_ip: str | None, source: str = "Rebro
                 # Seems to work for pvxs and Phoebus sources
                 pvasearchmsg = PVAccessSearchMessage(pva_message, pvamgshdr.endian)
                 logger.info(
-                    "%s SEARCH_REQUEST source (%s) self-identifies as %s:%i (seq id %i) with protocols %s searching for %s",
-                    source,
-                    packet_src_ip,
+                    "%s: self-identifies as %s:%i (seq id %i) with protocols %s searching for %s",
+                    messagehdr_str,
                     pvasearchmsg.reponse_address,
                     pvasearchmsg.response_port,
                     pvasearchmsg.search_sequence_id,
@@ -369,13 +395,6 @@ def log_pvaccess_packet(packet: Packet) -> None:
     if packet.udp_length and packet.udp_length >= 8:
         payload = packet.get_udp_payload()
         packet_src_ip = packet.ip_src_addr
-        # payload_hdr = b"\xca\x02\x80\x03\x00\x00\x000"
-        # payload = (
-        #     payload_hdr
-        #     + b"\r\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\x00\x00\x00\x00\xb0\xea\x01\x03tcp\x17\x00\x041 \x10\x1fTGT1:CRYO:CH4CBX:PV16M-C:STATUS 1 \x10 TGT1:CRYO:CH4GASPAN:PV36M:STATUS%1 \x10(TGT1:CRYO:CH4PLC:HEARTBEAT:PLC_HEARTBEAT&1 \x10#TGT1:CRYO:CH4PURGEPAN:PV310M:STATUS'1 \x10#TGT1:CRYO:CH4PURGEPAN:PV314M:STATUS(1 \x10#TGT1:CRYO:CH4PURGEPAN:PV315M:STATUS)1 \x10#TGT1:CRYO:CH4PURGEPAN:PV318M:STATUS+1 \x10-TGT1:CRYOCH4CRYOGENERATOR:CH4:PT170M:PRESSURE,1 \x10,TGT1:CRYOCH4CRYOGENERATOR:CH4:PT76M:PRESSURE-1 \x10%TGT1:CRYOGENERATOR:TS351M:TEMPERATURE.1 \x10$TGT1:GASPLATFORM:CH4:PT165M:PRESSURE/1 \x10$TGT1:GASPLATFORM:CH4:PT271M:PRESSURE01 \x10$TGT1:GASPLATFORM:CH4:PT297M:PRESSURE11 \x10$TGT1:GASPLATFORM:CH4:PT396M:PRESSURE21 \x10$TGT1:GASPLATFORM:CH4:PT397M:PRESSURE31 \x10$TGT1:GASPLATFORM:CH4:PT537M:PRESSURE41 \x10$TGT1:GASPLATFORM:CH4:PT558M:PRESSURE51 \x10 TGT1:R55ROOF:CH4:PT562M:PRESSURE61 \x10\x1eTGT1:WESTMEZZANINE:FM702M:FLOW71 \x10\x17TGT1:WTR:BEW:FM505:FLOW81 \x10\x18TGT1:WTR:BEW:LS501:LEVEL91 \x10\x1aTGT1:WTR:BEW:P502:PRESSURE:1 \x10\x1aTGT1:WTR:BEW:P504:PRESSURE"
-        # )
-        # packet_src_ip = "test"
-
         log_pvaccess(payload, packet_src_ip, "Received")
     else:
         logger.debug("Received from %s payload that was not PVAccess Protocol message", packet.ip_src_addr)
