@@ -141,7 +141,7 @@ class UDPRelayTransmit:
     def l4filter(self, packet: Packet) -> bool:
         """Tests to perform on Level4 of packet, i.e. UDP Protocol"""
         if packet.udp_dst_port != self.local_port:
-            logger.debug("Wrong UDP destination port: %i", packet.udp_dst_port)
+            logger.debug("Wrong UDP destination port: %i on packet %s", packet.udp_dst_port, packet)
             return False
 
         return True

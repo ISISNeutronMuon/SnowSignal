@@ -48,6 +48,10 @@ class Packet:
     ip_chksum: int | None = None
     ip_src_addr: str | None = None
     ip_dst_addr: str | None = None
+    ip_length: int | None = None
+    ipv4_identification: int | None = None
+    ipv4_more_fragments: bool = False
+    ipv4_fragmented_offset: int | None = None
 
     udp_src_port: int | None = None
     udp_dst_port: int | None = None
@@ -92,6 +96,14 @@ class Packet:
 
         if self.ip_version != 4:
             return
+
+        self.ip_length = iph[2]
+        self.ipv4_identification = iph[3]
+
+        # Decode fragment data
+        fragment_flag_and_offset = iph[4]
+        self.ipv4_more_fragments = bool(fragment_flag_and_offset & 0x2000)
+        self.ipv4_fragmented_offset = fragment_flag_and_offset & 0x1FFF
 
         # Calculate the length (of the header?)
         ihl = version_ihl & 0xF
