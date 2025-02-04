@@ -18,6 +18,9 @@ import ipaddress
 import logging
 import socket
 from collections.abc import Sequence
+from dataclasses import dataclass
+
+import cachetools
 
 from .configure import ConfigArgs
 from .netutils import get_localhost_macs, human_readable_mac, identify_pkttype, machine_readable_mac
@@ -27,8 +30,20 @@ from .pva_packet import log_pvaccess_packet
 logger = logging.getLogger(__name__)
 
 
+@dataclass(init=True, repr=True, eq=True, frozen=True)
+class FragID:
+    """Enough details about an IPv4 fragment to identify its later parts"""
+
+    fragid: int
+    src: str
+    dst: str
+
+
 class UDPRelayTransmit:
     """Listen for UDP broadcasts and transmit to the other relays"""
+
+    # We need a cache to store potential UDP fragments
+    _fragcache = cachetools.TTLCache(maxsize=1024, ttl=1)
 
     def __init__(
         self,
@@ -195,12 +210,57 @@ class UDPRelayTransmit:
                         self._loop_forever = self._continue_while_loop()
                         continue
 
-                    # Check Level 4 transport protocol, i.e. UDP
-                    packet.decode_udp()
-                    if not self.l4filter(packet):
-                        logger.debug("Failed l4filter")
-                        self._loop_forever = self._continue_while_loop()
-                        continue
+                    # Check for IP packet fragmentation, only IPv4 packets can be fragmented
+                    # https://en.wikipedia.org/wiki/IPv4#Fragmentation_and_reassembly
+                    # The fragment More Fragments flag is set True for the first fragment and subsequent flags until the
+                    # last segment in which the More Fragments flag is False. However, the Fragment Offset is only zero
+                    # in the first fragment.
+                    # We can identify a last fragment by the More Fragments flag being False and the Fragment Offset
+                    # being non-zero.
+                    # A non-fragmented IP packet will have the More Fragments flag set False and the Fragment Offset
+                    # equal to zero.
+                    if packet.ip_version == EthernetProtocol.IPv4 and (
+                        packet.ipv4_more_fragments or packet.ipv4_fragmented_offset
+                    ):
+                        # If this is the first packet then if will have a fragment offset of 0. Importantly,
+                        # we should still be able to evaluate it as UDP packet and thus see if it satisfies
+                        # our filters. If it doesn't then neither will subsequent fragments. However, if it
+                        # does satisfy the filter then so will subsequent fragments which won't have UDP
+                        # headers for us to evaluate
+                        if packet.ipv4_fragmented_offset == 0:
+                            packet.decode_udp()
+                            if self.l4filter(packet):
+                                self._fragcache[
+                                    FragID(packet.ipv4_identification, packet.ip_src_addr, packet.ip_dst_addr)  # type: ignore
+                                ] = packet
+                            else:
+                                logger.debug(
+                                    "Fragment (%i/%i) failed l4filter",
+                                    packet.ipv4_identification,
+                                    packet.ipv4_fragmented_offset,
+                                )
+                                self._loop_forever = self._continue_while_loop()
+                                continue
+                        else:
+                            # Check if this packet identifies as valid
+                            if not self._fragcache[
+                                FragID(packet.ipv4_identification, packet.ip_src_addr, packet.ip_dst_addr)  # type: ignore
+                            ]:
+                                logger.debug(
+                                    "Fragment (%i/%i) failed l4filter",
+                                    packet.ipv4_identification,
+                                    packet.ipv4_fragmented_offset,
+                                )
+                                self._loop_forever = self._continue_while_loop()
+                                continue
+                    else:
+                        # This is an ordinary unfragmented IP packet
+                        # Check Level 4 transport protocol, i.e. UDP
+                        packet.decode_udp()
+                        if not self.l4filter(packet):
+                            logger.debug("Failed l4filter")
+                            self._loop_forever = self._continue_while_loop()
+                            continue
                 except BadPacketException as bpe:
                     logger.debug("Malformed packet %r", bpe)
                     self._loop_forever = self._continue_while_loop()

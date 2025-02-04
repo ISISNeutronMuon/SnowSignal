@@ -286,12 +286,6 @@ class PVAccessSearchMessage:
             # Note that the spec uses a different size / count for this
             cc_unpacked = unpack(f"{endchar}H", msg_payload[payload_pointer : payload_pointer + 2])
             channels_count = cc_unpacked[0]
-            logger.debug(
-                "channel count = %i,  bytes = %s %s",
-                channels_count,
-                msg_payload[payload_pointer : payload_pointer + 2],
-                msg_payload[payload_pointer : payload_pointer + 2].hex(),
-            )
             payload_pointer = payload_pointer + 2
 
             # Get list of channels. This is an array of structs, where the structs are an integer identifier
