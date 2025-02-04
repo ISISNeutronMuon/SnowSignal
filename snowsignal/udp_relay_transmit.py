@@ -161,6 +161,52 @@ class UDPRelayTransmit:
 
         return True
 
+    def filter_fragment(self, packet: Packet) -> bool:
+        # If this is the first packet then if will have a fragment offset of 0. Importantly,
+        # we should still be able to evaluate it as a UDP packet and thus see if it satisfies
+        # our filters. If it doesn't then neither will subsequent fragments. However, if it
+        # does satisfy the filter then so will subsequent fragments which won't have UDP
+        # headers for us to evaluate
+        fragid = FragID(packet.ipv4_identification, packet.ip_src_addr, packet.ip_dst_addr)  # type: ignore
+
+        # If the Fragment Offset is zero then this is the first fragment
+        if packet.ipv4_fragmented_offset == 0:
+            # The first fragment should be a valid UDP packet
+            packet.decode_udp()
+            # If it passes the l4filter then we cache its identifier so that subsequent fragments may be passed
+            if self.l4filter(packet):
+                logger.debug(
+                    "Fragment (%i/%i), a first fragment, passed l4filter",
+                    packet.ipv4_identification,
+                    packet.ipv4_fragmented_offset,
+                )
+                self._fragcache[fragid] = packet
+            else:
+                logger.debug(
+                    "Fragment (%i/%i) failed l4filter",
+                    packet.ipv4_identification,
+                    packet.ipv4_fragmented_offset,
+                )
+                return False
+        else:
+            # This is a fragment but not the first one. It will therefore not have a valid UDP header to decode.
+            # Instead we check if its identifier is in the cache from an inspection of the first fragement. If it is
+            # then the first fragment passed the l4filter and therefore this one does too.
+            if not self._fragcache[fragid]:
+                logger.debug(
+                    "Fragment (%i/%i) not recognised as continuation of l4filter approved packet",
+                    packet.ipv4_identification,
+                    packet.ipv4_fragmented_offset,
+                )
+                return False
+
+            # If this is the final fragment, indicated by the More Fragments flag being False but the Fragment Offset being >0,
+            # then we need to remove its identifier from the fragment cache
+            if not packet.ipv4_more_fragments:
+                self._fragcache.pop(fragid)
+
+        return True
+
     async def start(self) -> None:
         """Monitor for UDP broadcasts on the specified port"""
         # create a AF_PACKET type raw socket (thats basically packet level)
@@ -212,48 +258,7 @@ class UDPRelayTransmit:
 
                     # Check for IP packet fragmentation, only IPv4 packets can be fragmented
                     # https://en.wikipedia.org/wiki/IPv4#Fragmentation_and_reassembly
-                    # The fragment More Fragments flag is set True for the first fragment and subsequent flags until the
-                    # last segment in which the More Fragments flag is False. However, the Fragment Offset is only zero
-                    # in the first fragment.
-                    # We can identify a last fragment by the More Fragments flag being False and the Fragment Offset
-                    # being non-zero.
-                    # A non-fragmented IP packet will have the More Fragments flag set False and the Fragment Offset
-                    # equal to zero.
-                    if packet.ip_version == EthernetProtocol.IPv4 and (
-                        packet.ipv4_more_fragments or packet.ipv4_fragmented_offset
-                    ):
-                        # If this is the first packet then if will have a fragment offset of 0. Importantly,
-                        # we should still be able to evaluate it as UDP packet and thus see if it satisfies
-                        # our filters. If it doesn't then neither will subsequent fragments. However, if it
-                        # does satisfy the filter then so will subsequent fragments which won't have UDP
-                        # headers for us to evaluate
-                        if packet.ipv4_fragmented_offset == 0:
-                            packet.decode_udp()
-                            if self.l4filter(packet):
-                                self._fragcache[
-                                    FragID(packet.ipv4_identification, packet.ip_src_addr, packet.ip_dst_addr)  # type: ignore
-                                ] = packet
-                            else:
-                                logger.debug(
-                                    "Fragment (%i/%i) failed l4filter",
-                                    packet.ipv4_identification,
-                                    packet.ipv4_fragmented_offset,
-                                )
-                                self._loop_forever = self._continue_while_loop()
-                                continue
-                        else:
-                            # Check if this packet identifies as valid
-                            if not self._fragcache[
-                                FragID(packet.ipv4_identification, packet.ip_src_addr, packet.ip_dst_addr)  # type: ignore
-                            ]:
-                                logger.debug(
-                                    "Fragment (%i/%i) failed l4filter",
-                                    packet.ipv4_identification,
-                                    packet.ipv4_fragmented_offset,
-                                )
-                                self._loop_forever = self._continue_while_loop()
-                                continue
-                    else:
+                    if not packet.is_ipv4_fragmented():
                         # This is an ordinary unfragmented IP packet
                         # Check Level 4 transport protocol, i.e. UDP
                         packet.decode_udp()
@@ -261,6 +266,12 @@ class UDPRelayTransmit:
                             logger.debug("Failed l4filter")
                             self._loop_forever = self._continue_while_loop()
                             continue
+                    else:
+                        if not self.filter_fragment(packet):  # Note we may l4filter in this call
+                            logger.debug("Failed l4filter of fragment")
+                            self._loop_forever = self._continue_while_loop()
+                            continue
+
                 except BadPacketException as bpe:
                     logger.debug("Malformed packet %r", bpe)
                     self._loop_forever = self._continue_while_loop()

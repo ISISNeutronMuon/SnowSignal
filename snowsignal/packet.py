@@ -184,3 +184,17 @@ class Packet:
     def change_ethernet_source(self, newmac) -> None:
         """Change packet Ethernet source to a new MAC address"""
         self.raw = self.raw[0:6] + newmac + self.raw[12:]
+
+    def is_ipv4_fragmented(self) -> bool:
+        """Check if the IPv4 packet is fragmented"""
+        # Check for IP packet fragmentation, only IPv4 packets can be fragmented
+        # https://en.wikipedia.org/wiki/IPv4#Fragmentation_and_reassembly
+        # If a fragment then the More Fragments flag is set True for the first fragment and subsequent flags until the
+        # last segment in which the More Fragments flag is False. However, the Fragment Offset is only zero
+        # in the first fragment.
+        # We can identify a last fragment by the More Fragments flag being False and the Fragment Offset being non-zero.
+        # A non-fragmented IP packet will have the More Fragments flag set False and the Fragment Offset equal to zero.
+
+        return self.ip_version == EthernetProtocol.IPv4 and (
+            self.ipv4_more_fragments or self.ipv4_fragmented_offset != 0
+        )
