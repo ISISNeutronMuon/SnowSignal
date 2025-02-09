@@ -4,6 +4,7 @@ import asyncio
 import logging
 import os
 import random
+import socket
 import string
 import unittest
 import unittest.mock
@@ -40,6 +41,13 @@ class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
             / scapy.layers.inet.IP(dst="255.255.255.255", src=src, ihl=5, flags="DF")
             / scapy.layers.inet.UDP(dport=5076)
             / scapy.packet.Raw(load=self._test_payload)
+        )
+
+        packet2 = (
+            scapy.layers.l2.Ether(dst="ff:ff:ff:ff:ff:ff")
+            / scapy.layers.inet.IP(dst="255.255.255.255")
+            / scapy.layers.inet.UDP(dport=5076)
+            / scapy.packet.Raw(b"a" * 200)
         )
 
         return packet
@@ -110,53 +118,100 @@ class TestSnowSignalSynch(unittest.TestCase):
 class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
     """Test sending a valid fragmented UDP packet"""
 
-    maxDiff = None
+    ### This is often needed to understand what the hell is going on in this complex integration test
+    # logger = logging.getLogger(__name__)
+    # logging.basicConfig(
+    #     format="%(asctime)s - %(levelname)s - %(name)s.%(funcName)s: %(message)s",
+    #     encoding="utf-8",
+    #     level=logging.INFO,
+    # )
 
-    def _create_broadcast_test_packet_frag1(self) -> scapy.packet.Packet:
-        packet = scapy.layers.l2.Ether(
-            b"\xff\xff\xff\xff\xff\xff\x02B\n\x00\x03\xb5\x08\x00E\x00\x05\xa4\xd4Y \x00@\x11e<\n\x00\x03\xb5\n\x00\x03\xff\xa5\xa8\x13\xd4\x05\xa3?:\xca\x02\x00\x03\x93\x05\x00\x00\\b\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\x00\x00\x00\x00\xa8\xa5\x01\x03tcp4\x00m1 \x10\x15DEV:LADA:MRE:DOUBLE:0n1 \x10\x15DEV:LADA:MRE:DOUBLE:1o1 \x10\x15DEV:LADA:MRE:DOUBLE:2p1 \x10\x15DEV:LADA:MRE:DOUBLE:3q1 \x10\x15DEV:LADA:MRE:DOUBLE:4r1 \x10\x15DEV:LADA:MRE:DOUBLE:5s1 \x10\x15DEV:LADA:MRE:DOUBLE:6t1 \x10\x15DEV:LADA:MRE:DOUBLE:7u1 \x10\x15DEV:LADA:MRE:DOUBLE:8v1 \x10\x15DEV:LADA:MRE:DOUBLE:9w1 \x10\x16DEV:LADA:MRE:DOUBLE:10x1 \x10\x16DEV:LADA:MRE:DOUBLE:11y1 \x10\x16DEV:LADA:MRE:DOUBLE:12z1 \x10\x16DEV:LADA:MRE:DOUBLE:13{1 \x10\x16DEV:LADA:MRE:DOUBLE:14|1 \x10\x16DEV:LADA:MRE:DOUBLE:15}1 \x10\x16DEV:LADA:MRE:DOUBLE:16~1 \x10\x16DEV:LADA:MRE:DOUBLE:17\x7f1 \x10\x16DEV:LADA:MRE:DOUBLE:18\x801 \x10\x16DEV:LADA:MRE:DOUBLE:19\x811 \x10\x16DEV:LADA:MRE:DOUBLE:20\x821 \x10\x16DEV:LADA:MRE:DOUBLE:21\x831 \x10\x16DEV:LADA:MRE:DOUBLE:22\x841 \x10\x16DEV:LADA:MRE:DOUBLE:23\x851 \x10\x16DEV:LADA:MRE:DOUBLE:24\x861 \x10\x16DEV:LADA:MRE:DOUBLE:25\x871 \x10\x16DEV:LADA:MRE:DOUBLE:26\x881 \x10\x16DEV:LADA:MRE:DOUBLE:27\x891 \x10\x16DEV:LADA:MRE:DOUBLE:28\x8a1 \x10\x16DEV:LADA:MRE:DOUBLE:29\x8b1 \x10\x16DEV:LADA:MRE:DOUBLE:30\x8c1 \x10\x16DEV:LADA:MRE:DOUBLE:31\x8d1 \x10\x16DEV:LADA:MRE:DOUBLE:32\x8e1 \x10\x16DEV:LADA:MRE:DOUBLE:33\x8f1 \x10\x16DEV:LADA:MRE:DOUBLE:34\x901 \x10\x16DEV:LADA:MRE:DOUBLE:35\x911 \x10\x16DEV:LADA:MRE:DOUBLE:36\x921 \x10\x16DEV:LADA:MRE:DOUBLE:37\x931 \x10\x16DEV:LADA:MRE:DOUBLE:38\x941 \x10\x16DEV:LADA:MRE:DOUBLE:39\x951 \x10\x16DEV:LADA:MRE:DOUBLE:40\x961 \x10\x16DEV:LADA:MRE:DOUBLE:41\x971 \x10\x16DEV:LADA:MRE:DOUBLE:42\x981 \x10\x16DEV:LADA:MRE:DOUBLE:43\x991 \x10\x16DEV:LADA:MRE:DOUBLE:44\x9a1 \x10\x16DEV:LADA:MRE:DOUBLE:45\x9b1 \x10\x16DEV:LADA:MRE:DOUBLE:46\x9c1 \x10\x16DEV:LADA:MRE:DOUBLE:47\x9d1 \x10\x16DEV:LADA:MRE:DOUBLE:48\x9e1 \x10\x16DEV:LADA:MRE:DOUBLE:49\x9f1 \x10\x16DEV:LADA:MRE:DOUBLE:50\xa01 \x10\x16DEV"
+    def send_udp_broadcast(self, message: bytes, port: int = 5076):
+        """Send a UDP broadcast message"""
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        sock.sendto(message, ("255.255.255.255", port))
+        sock.close()
+
+    class UDPReceiveOnceProtocol(asyncio.DatagramProtocol):
+        """Listen for a single UDP message"""
+
+        def __init__(self):
+            self.message = None
+
+        def connection_made(self, transport):
+            self.transport = transport
+
+        def datagram_received(self, data, addr):
+            self.message = data
+            self.transport.close()
+
+    async def test_fragmentation_sendreceive(self):
+        """Simple test that we are sending and receiving"""
+
+        # Start loop listening for UDP messages on port 5076
+        loop = asyncio.get_running_loop()
+        transport, protocol = await loop.create_datagram_endpoint(
+            self.UDPReceiveOnceProtocol, local_addr=("0.0.0.0", 5076)
         )
 
-        return packet
+        # Give it a little time to fully setup
+        await asyncio.sleep(0.1)
 
-    def _create_broadcast_test_packet_frag2(self) -> scapy.packet.Packet:
-        packet = scapy.layers.l2.Ether(
-            b"\xff\xff\xff\xff\xff\xff\x02B\n\x00\x03\xb5\x08\x00E\x00\x00'\xd4Y\x00\xb2@\x11\x8a\x07\n\x00\x03\xb5\n\x00\x03\xff:LADA:MRE:DOUBLE:51"
+        # Send a fragmented UDP message. We ensure fragmentation by making the message payload long
+        toolong_msg = b"abcdefghij" * 500
+        self.send_udp_broadcast(toolong_msg)
+
+        # Give them time to arrive
+        await asyncio.sleep(0.1)
+
+        self.assertEqual(protocol.message, toolong_msg)
+
+    # Because this test is using UDP broadcast messages sourced from the same container, and thus
+    # the same MAC address, we need to switch off the UDPRelayTransmit l2filter
+    # Mocking out the UDPRelayReceive has a primary purpose of letting us test that the fragments
+    # are transmitted as expected, but it also serves to disable rebroadcasts and thus mitigate
+    # the risk of a mini packet storm
+    @patch("snowsignal.udp_relay_transmit.UDPRelayTransmit.l2filter", return_value=True)
+    @patch("snowsignal.udp_relay_receive.UDPRelayReceive.datagram_received")
+    async def test_fragments_rebroadcast(self, mock_datagram_received: unittest.mock.AsyncMock, _):
+        # Start main, note that we can't use the loopback interface as we won't see packet
+        # fragmentation on that interface. That makes this test very brittle
+        main_task = asyncio.create_task(
+            snowsignal.main("--target-interface=eth0 --other-relays=172.21.0.3", loop_forever=True)
         )
-
-        return packet
-
-    async def test_main_runs(self):
-        """See if main executes without any problems!"""
-
-        await snowsignal.main("--log-level=error", loop_forever=False)
-
-    @patch.object(snowsignal.UDPRelayTransmit, "_send_to_relays_packet")
-    async def test_integration(
-        self,
-        receive_datagram_mock: unittest.mock.AsyncMock,
-    ):
-        """Simple integration test"""
-        # Start main, note that we are using the loopback interface. This is
-        # important for CI/CD testing (and handy for keeping our test packets
-        # local).
-        main_task = asyncio.create_task(snowsignal.main("--target-interface=lo --log-level=error", loop_forever=True))
 
         # Give time for setup to happen
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(1)
 
-        # Send the broadcast fragments to the loopback interface
-        send_packet_frag1 = self._create_broadcast_test_packet_frag1()
-        scapy.sendrecv.sendp(send_packet_frag1, "lo")
-
-        send_packet_frag2 = self._create_broadcast_test_packet_frag2()
-        scapy.sendrecv.sendp(send_packet_frag2, "lo")
+        # Send a fragmented UDP message. We ensure fragmentation by making the message payload long
+        toolong_msg = b""
+        for i in range(500):
+            toolong_msg += f"test{i:03d}".encode("utf-8")
+        self.send_udp_broadcast(toolong_msg)
 
         # And some time for packets to fly around
         await asyncio.sleep(0.25)
 
-        # Then test if it all worked!
-        self.assertEqual(receive_datagram_mock.call_count, 2)
+        # Then test if it all worked! We attempt to reassemble the packet payload from the fragments
+        # by looping throuhg the calls to datagram_received and examining the data argument
+        received_packet_payloads = b""
+        for call in mock_datagram_received.call_args_list:
+            data = call[0][0]
+
+            if data[0:2] == b"SS":
+                data = data[2:]
+            else:
+                self.fail("Unexpected data format received; did not start with magic bytes 'SS'")
+
+            # First fragment is UDP but later ones are not
+            packet = scapy.layers.l2.Ether(data)
+            try:
+                received_packet_payloads += bytes(packet[scapy.layers.inet.UDP].payload)
+            except IndexError:
+                received_packet_payloads += bytes(packet[scapy.layers.inet.IP].payload)
+
+        self.assertEqual(received_packet_payloads, toolong_msg)
 
         # Quit main, though it probably quits anyway
         main_task.cancel()
