@@ -170,8 +170,9 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
     async def test_fragments_rebroadcast(self, mock_datagram_received: unittest.mock.AsyncMock, _):
         # Start main, note that we can't use the loopback interface as we won't see packet
         # fragmentation on that interface. That makes this test very brittle
+        self_relay = netutils.get_localipv4_from_iface("eth0")
         main_task = asyncio.create_task(
-            snowsignal.main("--target-interface=eth0 --other-relays=172.21.0.3", loop_forever=True)
+            snowsignal.main(f"--target-interface=eth0 --other-relays={self_relay}", loop_forever=True)
         )
 
         # Give time for setup to happen
