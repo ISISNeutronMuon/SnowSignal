@@ -120,7 +120,7 @@ async def main(argv: Sequence[str] | None = None, loop_forever: bool = True):
     # Loop forever, but if in swarm mode periodically recheck the relays
     while loop_forever:
         await asyncio.sleep(10)
-        if swarmmode:
+        if swarmmode and not config.other_relays:
             # Check to see if remote relays have changed
             # e.g. containers have restarted
             udp_relay_transmit.set_remote_relays(discover_relays())
