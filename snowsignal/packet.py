@@ -194,7 +194,4 @@ class Packet:
         # in the first fragment.
         # We can identify a last fragment by the More Fragments flag being False and the Fragment Offset being non-zero.
         # A non-fragmented IP packet will have the More Fragments flag set False and the Fragment Offset equal to zero.
-
-        return self.ip_version == EthernetProtocol.IPv4 and (
-            self.ipv4_more_fragments or self.ipv4_fragmented_offset != 0
-        )
+        return self.ip_version == 4 and (self.ipv4_more_fragments or self.ipv4_fragmented_offset != 0)
