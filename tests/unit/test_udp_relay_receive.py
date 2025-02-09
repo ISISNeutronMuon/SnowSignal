@@ -30,6 +30,7 @@ class TestUDPRelayReceiveMethods(unittest.TestCase):
 
             def __init__(self):
                 self.target_interface = "eth0"
+                self.decode_pvaccess = False
 
         config = Config()
         if sys.platform == "win32":

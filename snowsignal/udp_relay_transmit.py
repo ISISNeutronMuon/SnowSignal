@@ -70,8 +70,10 @@ class UDPRelayTransmit:
         # otherwise use some sensible defaults
         if config:
             self._iface = config.target_interface
+            self._decode_pvaccess = config.decode_pvaccess
         else:
             self._iface = "eth0"
+            self._decode_pvaccess = False
 
         self._macs = get_localhost_macs()
         self._macs = [machine_readable_mac(x) for x in self._macs]
@@ -279,7 +281,7 @@ class UDPRelayTransmit:
 
                 # Use this unusual conditional in order to avoid expensive
                 # decoding operations when we're not debugging
-                if logger.isEnabledFor(logging.INFO):
+                if self._decode_pvaccess and logger.isEnabledFor(logging.INFO):
                     log_pvaccess_packet(packet)
 
                 # Send to other relays

@@ -20,6 +20,7 @@ class ConfigArgs(NamedTuple):
     mesh_port: int
     other_relays: list[str]
     log_level: str
+    decode_pvaccess: bool
 
 
 def configure(argv: Sequence[str] | None = None) -> ConfigArgs:
@@ -66,6 +67,7 @@ def configure(argv: Sequence[str] | None = None) -> ConfigArgs:
         default="info",
         help="Logging level",
     )
+    p.add_argument("--decode-pvaccess", action="store_true", help="Attempt to decode and log to INFO pvaccess messages")
     # Remember to add new arguments to the Args class above!
 
     # config = p.parse_args(argv)

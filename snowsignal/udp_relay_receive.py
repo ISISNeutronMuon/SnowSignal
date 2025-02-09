@@ -40,8 +40,10 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
 
         if config:
             self._iface = config.target_interface
+            self._decode_pvaccess = config.decode_pvaccess
         else:
             self._iface = "eth0"
+            self._decode_pvaccess = False
 
         # Assume the MAC address is immutable
         self._mac = get_macaddress_from_iface(self._iface)
@@ -66,6 +68,7 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         """Calculate UDP checksum, using the IP and UDP parts of the packet,
         and change the existing packet UDP checksum with the newly calculcated
         checksum"""
+        logger.debug("Recalculating UDP checksum")
 
         # The UDP checksum algorithm is defined in RFC768
         # https://www.rfc-editor.org/rfc/rfc768.txt
@@ -160,7 +163,7 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
 
         # Use this unusual conditional in order to avoid expensive
         # decoding operations when we're not debugging
-        if logger.isEnabledFor(logging.INFO):
+        if self._decode_pvaccess and logger.isEnabledFor(logging.INFO):
             # Construct a fake ethernet header so we can decode the IP address using existing
             # functionality. This will only work if the original source used IPv4.
             # TODO: This indicates a flaw in the current logic. The received broadcast and the
