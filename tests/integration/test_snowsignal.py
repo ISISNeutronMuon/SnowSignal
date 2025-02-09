@@ -43,13 +43,6 @@ class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
             / scapy.packet.Raw(load=self._test_payload)
         )
 
-        packet2 = (
-            scapy.layers.l2.Ether(dst="ff:ff:ff:ff:ff:ff")
-            / scapy.layers.inet.IP(dst="255.255.255.255")
-            / scapy.layers.inet.UDP(dport=5076)
-            / scapy.packet.Raw(b"a" * 200)
-        )
-
         return packet
 
     async def test_main_runs(self):
@@ -187,7 +180,7 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
         # Send a fragmented UDP message. We ensure fragmentation by making the message payload long
         toolong_msg = b""
         for i in range(500):
-            toolong_msg += f"test{i:03d}".encode("utf-8")
+            toolong_msg += f"test{i:03d}".encode()
         self.send_udp_broadcast(toolong_msg)
 
         # And some time for packets to fly around
