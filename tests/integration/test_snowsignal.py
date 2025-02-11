@@ -51,10 +51,7 @@ class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
         await snowsignal.main("--log-level=error", loop_forever=False)
 
     @patch.object(snowsignal.UDPRelayReceive, "datagram_received")
-    async def test_integration(
-        self,
-        receive_datagram_mock: unittest.mock.AsyncMock,
-    ):
+    async def test_integration(self, receive_datagram_mock: unittest.mock.AsyncMock):
         """Simple integration test"""
         # Start main, note that we are using the loopback interface. This is
         # important for CI/CD testing (and handy for keeping our test packets
@@ -111,14 +108,6 @@ class TestSnowSignalSynch(unittest.TestCase):
 class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
     """Test sending a valid fragmented UDP packet"""
 
-    ### This is often needed to understand what the hell is going on in this complex integration test
-    logger = logging.getLogger(__name__)
-    logging.basicConfig(
-        format="%(asctime)s - %(levelname)s - %(name)s.%(funcName)s: %(message)s",
-        encoding="utf-8",
-        level=logging.DEBUG,
-    )
-
     def send_udp_broadcast(self, message: bytes, port: int = 5076):
         """Send a UDP broadcast message"""
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -144,9 +133,7 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
 
         # Start loop listening for UDP messages on port 5076
         loop = asyncio.get_running_loop()
-        transport, protocol = await loop.create_datagram_endpoint(
-            self.UDPReceiveOnceProtocol, local_addr=("0.0.0.0", 5076)
-        )
+        _, protocol = await loop.create_datagram_endpoint(self.UDPReceiveOnceProtocol, local_addr=("0.0.0.0", 5076))
 
         # Give it a little time to fully setup
         await asyncio.sleep(0.1)
@@ -168,6 +155,18 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
     @patch("snowsignal.udp_relay_transmit.UDPRelayTransmit.l2filter", return_value=True)
     @patch("snowsignal.udp_relay_receive.UDPRelayReceive.datagram_received")
     async def test_fragments_rebroadcast(self, mock_datagram_received: unittest.mock.AsyncMock, _):
+        """Integration test to check what happens when we send a packet with a payload so
+        large that it will become fragmented in an IPv4 environment
+        """
+
+        ## This is often needed to understand what the hell is going on in this complex integration test
+        logger = logging.getLogger(__name__)
+        logging.basicConfig(
+            format="%(asctime)s - %(levelname)s - %(name)s.%(funcName)s: %(message)s",
+            encoding="utf-8",
+            level=logging.DEBUG,
+        )
+
         # Start main, note that we can't use the loopback interface as we won't see packet
         # fragmentation on that interface. That makes this test very brittle
         main_task = asyncio.create_task(snowsignal.main("--target-interface=eth0", loop_forever=True))
