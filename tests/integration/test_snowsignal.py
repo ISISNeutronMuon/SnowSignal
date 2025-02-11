@@ -160,7 +160,7 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
         """
 
         ## This is often needed to understand what the hell is going on in this complex integration test
-        logger = logging.getLogger(__name__)
+        # logger = logging.getLogger(__name__)
         logging.basicConfig(
             format="%(asctime)s - %(levelname)s - %(name)s.%(funcName)s: %(message)s",
             encoding="utf-8",
