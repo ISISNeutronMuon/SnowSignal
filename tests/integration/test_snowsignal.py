@@ -159,14 +159,6 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
         large that it will become fragmented in an IPv4 environment
         """
 
-        ## This is often needed to understand what the hell is going on in this complex integration test
-        # logger = logging.getLogger(__name__)
-        logging.basicConfig(
-            format="%(asctime)s - %(levelname)s - %(name)s.%(funcName)s: %(message)s",
-            encoding="utf-8",
-            level=logging.DEBUG,
-        )
-
         # Start main, note that we can't use the loopback interface as we won't see packet
         # fragmentation on that interface. That makes this test very brittle
         main_task = asyncio.create_task(snowsignal.main("--target-interface=eth0", loop_forever=True))

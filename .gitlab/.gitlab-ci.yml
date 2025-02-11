@@ -35,6 +35,8 @@ Run unittests:
     - coverage report -m
     - coverage xml
   coverage: '/TOTAL.*\s+(\d+\%)/'
+  variables:
+    FF_NETWORK_PER_BUILD: 1
   artifacts:
     when: always
     reports:
