@@ -36,7 +36,7 @@ Run unittests:
     - coverage xml
   coverage: '/TOTAL.*\s+(\d+\%)/'
   variables:
-    FF_NETWORK_PER_BUILD: 1
+    FF_NETWORK_PER_BUILD: 1 # Integration tests need to send real UDP broadcasts so could potentially interfere with one another
   artifacts:
     when: always
     reports:

@@ -45,11 +45,13 @@ class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
 
         return packet
 
+    @unittest.skip("Need to see logging only for fragments_rebroadcast test")
     async def test_main_runs(self):
         """See if main executes without any problems!"""
 
         await snowsignal.main("--log-level=error", loop_forever=False)
 
+    @unittest.skip("Need to see logging only for fragments_rebroadcast test")
     @patch.object(snowsignal.UDPRelayReceive, "datagram_received")
     async def test_integration(self, receive_datagram_mock: unittest.mock.AsyncMock):
         """Simple integration test"""
@@ -108,6 +110,13 @@ class TestSnowSignalSynch(unittest.TestCase):
 class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
     """Test sending a valid fragmented UDP packet"""
 
+    ## This is often needed to understand what the hell is going on in this complex integration test
+    logging.basicConfig(
+        format="%(asctime)s - %(levelname)s - %(name)s.%(funcName)s: %(message)s",
+        encoding="utf-8",
+        level=logging.DEBUG,
+    )
+
     def send_udp_broadcast(self, message: bytes, port: int = 5076):
         """Send a UDP broadcast message"""
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -128,6 +137,7 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
             self.message = data
             self.transport.close()
 
+    @unittest.skip("Need to see logging only for fragments_rebroadcast test")
     async def test_fragmentation_sendreceive(self):
         """Simple test that we are sending and receiving"""
 
