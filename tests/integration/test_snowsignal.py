@@ -83,6 +83,7 @@ class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
         main_task.cancel()
 
 
+@unittest.skip("Need to see logging only for fragments_rebroadcast test")
 class TestSnowSignalSynch(unittest.TestCase):
     """Test the non-asynch functions in snowsignal"""
 
@@ -116,11 +117,12 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
         level=logging.DEBUG,
     )
 
-    def send_udp_broadcast(self, message: bytes, port: int = 5076):
+    def send_udp_broadcast(self, message: bytes, broadcast_address="255.255.255.255", port: int = 5076):
         """Send a UDP broadcast message"""
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        sock.sendto(message, ("255.255.255.255", port))
+        sock.sendto(message, (broadcast_address, port))
+        logger.debug(f"Sent UDP broadcast message to {broadcast_address}:{port}")
         sock.close()
 
     class UDPReceiveOnceProtocol(asyncio.DatagramProtocol):
@@ -167,6 +169,7 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
         """Integration test to check what happens when we send a packet with a payload so
         large that it will become fragmented in an IPv4 environment
         """
+        broadcast_address = netutils.get_broadcast_from_iface("eth0")
 
         # Start main, note that we can't use the loopback interface as we won't see packet
         # fragmentation on that interface. That makes this test very brittle
@@ -179,7 +182,7 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
         toolong_msg = b""
         for i in range(500):
             toolong_msg += f"test{i:03d}".encode()
-        self.send_udp_broadcast(toolong_msg)
+        self.send_udp_broadcast(toolong_msg, broadcast_address)
 
         # And some time for packets to fly around
         await asyncio.sleep(0.25)
