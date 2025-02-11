@@ -1,3 +1,5 @@
+"""Test the netutils module"""
+
 import ipaddress
 import unittest
 
@@ -7,7 +9,10 @@ from snowsignal import netutils
 
 
 class TestNetUtilsFunctions(unittest.TestCase):
+    """Tests of the various helper functions in netutils"""
+
     def test_get_ips_from_name(self):
+        """Test getting IP addresses from a domain name"""
         # Check that the function returns one or more IP addresses
         ips = netutils.get_ips_from_name("example.com")
 
@@ -18,6 +23,7 @@ class TestNetUtilsFunctions(unittest.TestCase):
             self.assertIsInstance(ip, (ipaddress.IPv4Address, ipaddress.IPv6Address))
 
     def test_get_localhost_ips(self):
+        """Test getting IP addresses of localhost"""
         ips = netutils.get_localhost_ips()
 
         self.assertIsInstance(ips, list)
@@ -26,6 +32,7 @@ class TestNetUtilsFunctions(unittest.TestCase):
             self.assertIsInstance(ip, (ipaddress.IPv4Address, ipaddress.IPv6Address))
 
     def test_get_local_macs(self):
+        """Test getting the MAC addresses of the local network interfaces"""
         macs = netutils.get_localhost_macs()
 
         self.assertIsInstance(macs, list)
@@ -36,6 +43,7 @@ class TestNetUtilsFunctions(unittest.TestCase):
             )
 
     def test_get_broadcast_from_iface(self):
+        """Test getting the broadcast addresses of the local network interfaces"""
         # Loop through the interfaces till we find one with a broadcast address
         ifaces = psutil.net_if_addrs().keys()
         for iface in ifaces:
@@ -50,6 +58,7 @@ class TestNetUtilsFunctions(unittest.TestCase):
         ipaddress.ip_address(broadcast_address)
 
     def test_human_readable_mac(self):
+        """Test turning a MAC address into a human readable format"""
         test_args = (
             {"input": bytes.fromhex("0a1b2c3d4e5f"), "output": "0a:1b:2c:3d:4e:5f", "separator": ":"},
             {"input": bytes.fromhex("0a1b2c3d4e5f"), "output": "0a-1b-2c-3d-4e-5f", "separator": "-"},
@@ -68,6 +77,7 @@ class TestNetUtilsFunctions(unittest.TestCase):
                 self.assertEqual(mac, test_arg["output"])
 
     def test_machine_readable_mac(self):
+        """Test turning a human readable MAC address into plain hex"""
         test_args = (
             {"input": "0a:1b:2c:3d:4e:5f", "output": bytes.fromhex("0a1b2c3d4e5f")},
             {"input": "0a-1b-2c-3d-4e-5f", "output": bytes.fromhex("0a1b2c3d4e5f")},

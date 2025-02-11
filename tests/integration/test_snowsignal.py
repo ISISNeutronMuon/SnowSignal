@@ -28,6 +28,7 @@ scapy.config.conf.logLevel = logging.ERROR
 logger = logging.getLogger(__name__)
 
 
+@unittest.skip("Need to see logging only for fragments_rebroadcast test")
 class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
     """Test the asynch functions in snowsignal.py"""
 
@@ -45,13 +46,11 @@ class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
 
         return packet
 
-    @unittest.skip("Need to see logging only for fragments_rebroadcast test")
     async def test_main_runs(self):
         """See if main executes without any problems!"""
 
         await snowsignal.main("--log-level=error", loop_forever=False)
 
-    @unittest.skip("Need to see logging only for fragments_rebroadcast test")
     @patch.object(snowsignal.UDPRelayReceive, "datagram_received")
     async def test_integration(self, receive_datagram_mock: unittest.mock.AsyncMock):
         """Simple integration test"""

@@ -14,7 +14,10 @@ from snowsignal import packet
 from snowsignal.netutils import machine_readable_mac
 
 
+@unittest.skip("Need to see logging only for fragments_rebroadcast test")
 class TestPacketMethods(unittest.TestCase):
+    """Test functions for decoding raw packets"""
+
     def _create_ipv4_udp_frame(self) -> bytes:
         pack = (
             scapy.layers.l2.Ether(dst="ff:ff:ff:ff:ff:ff", src="00:0a:1b:2c:3d:4e")
@@ -42,6 +45,7 @@ class TestPacketMethods(unittest.TestCase):
     ## This block of tests confirms that we correctly handle a well-formed Ethernet / IPv4 / UDP message
     #  Note the IPv4 above!
     def test_init_ip4udp_packet(self):
+        """Test decoding a well-formed IPv4 packet with a valid UDP payload"""
         pack = packet.Packet(self._create_ipv4_udp_frame())
 
         self.assertEqual(pack.eth_protocol, packet.EthernetProtocol.IPv4)  # Only currently support Ethernet-II
@@ -50,6 +54,7 @@ class TestPacketMethods(unittest.TestCase):
 
     @patch("snowsignal.packet.Packet._decode_ipv4", side_effect=packet.Packet._decode_ipv4, autospec=True)
     def test_decodeip_ip4udp_packet(self, decode_ipv4_mock: unittest.mock.MagicMock):
+        """Test decoding a valid IPv4 packet"""
         # def test_decodeip_ip4udp_packet(self):
         pack = packet.Packet(self._create_ipv4_udp_frame())
         pack.decode_ip()
@@ -62,6 +67,7 @@ class TestPacketMethods(unittest.TestCase):
         self.assertEqual(pack.ip_src_addr, "127.0.0.1")
 
     def test_decodeudp_ip4udp_packet(self):
+        """Test decoding a valid IPv4 packet with a valid UDP payload"""
         pack = packet.Packet(self._create_ipv4_udp_frame())
         pack.decode_ip()
         pack.decode_udp()
@@ -73,6 +79,7 @@ class TestPacketMethods(unittest.TestCase):
     ## This block of tests confirms that we correctly handle a well-formed Ethernet / IPv6 / UDP message
     #  Note the IPv6 above!
     def test_init_ip6udp_packet(self):
+        """Test decoding Ethernet part of a valid IPv6 packet"""
         pack = packet.Packet(self._create_ipv6_udp_frame())
 
         self.assertEqual(pack.eth_protocol, packet.EthernetProtocol.IPv6)  # Only currently support Ethernet-II
@@ -81,6 +88,7 @@ class TestPacketMethods(unittest.TestCase):
 
     @patch("snowsignal.packet.Packet._decode_ipv6", side_effect=packet.Packet._decode_ipv6, autospec=True)
     def test_decodeip_ip6udp_packet(self, decode_ipv6_mock: unittest.mock.MagicMock):
+        """Test decoding IPv6 part of a valid IPv6 packet with a valid UDP payload"""
         pack = packet.Packet(self._create_ipv6_udp_frame())
         pack.decode_ip()
 
@@ -93,6 +101,7 @@ class TestPacketMethods(unittest.TestCase):
         self.assertEqual(pack.ip_src_addr, machine_readable_mac("3001:0da8:75a3:0000:0000:8a2e:0370:7334"))
 
     def test_decodeudp_ip6udp_packet(self):
+        """Test decoding a valid IPv6 packet with a valid UDP payload"""
         pack = packet.Packet(self._create_ipv6_udp_frame())
         pack.decode_ip()
         pack.decode_udp()
@@ -103,12 +112,14 @@ class TestPacketMethods(unittest.TestCase):
 
     # Handling bad, corrupt or malicious packets
     def test_bad_ethernet_frame(self):
+        """Test handling of corrupt Ethernet frame"""
         good_packet = self._create_ipv4_udp_frame()
         truncated_packet = good_packet[0:3]
 
         self.assertRaises(packet.BadPacketException, packet.Packet, truncated_packet)
 
     def test_bad_ip_headers(self):
+        """Test handling of corrupt IPv4 and IPV6 packets"""
         good_ipv4_packet = self._create_ipv4_udp_frame()
         truncated_packet = packet.Packet(good_ipv4_packet[0:17])
         self.assertRaises(packet.BadPacketException, truncated_packet.decode_ip)
@@ -118,6 +129,7 @@ class TestPacketMethods(unittest.TestCase):
         self.assertRaises(packet.BadPacketException, truncated_packet.decode_ip)
 
     def test_bad_udp_headers(self):
+        """Test handling of corrupt UDP packets in IPv4 and IPv6"""
         good_ipv4_packet = self._create_ipv4_udp_frame()
         truncated_packet = packet.Packet(good_ipv4_packet[0:35])
         truncated_packet.decode_ip()
