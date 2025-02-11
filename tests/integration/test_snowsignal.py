@@ -112,12 +112,12 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
     """Test sending a valid fragmented UDP packet"""
 
     ### This is often needed to understand what the hell is going on in this complex integration test
-    # logger = logging.getLogger(__name__)
-    # logging.basicConfig(
-    #     format="%(asctime)s - %(levelname)s - %(name)s.%(funcName)s: %(message)s",
-    #     encoding="utf-8",
-    #     level=logging.INFO,
-    # )
+    logger = logging.getLogger(__name__)
+    logging.basicConfig(
+        format="%(asctime)s - %(levelname)s - %(name)s.%(funcName)s: %(message)s",
+        encoding="utf-8",
+        level=logging.DEBUG,
+    )
 
     def send_udp_broadcast(self, message: bytes, port: int = 5076):
         """Send a UDP broadcast message"""
