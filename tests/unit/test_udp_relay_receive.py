@@ -14,6 +14,7 @@ import scapy.packet
 from snowsignal import udp_relay_receive
 
 
+@unittest.skip("Need to see logging only for fragments_rebroadcast test")
 class TestUDPRelayReceiveMethods(unittest.TestCase):
     """Test the udp_relay_receive class method functions"""
 

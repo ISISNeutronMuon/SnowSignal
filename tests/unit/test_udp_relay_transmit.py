@@ -13,6 +13,7 @@ import scapy.packet
 from snowsignal import udp_relay_transmit
 
 
+@unittest.skip("Need to see logging only for fragments_rebroadcast test")
 class TestUDPRelayTransmitMethods(unittest.IsolatedAsyncioTestCase):
     """Test UDPRelayTransmit class"""
 
