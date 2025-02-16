@@ -138,23 +138,25 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
             self.message = data
             self.transport.close()
 
-    @unittest.skip("Need to see logging only for fragments_rebroadcast test")
     async def test_fragmentation_sendreceive(self):
         """Simple test that we are sending and receiving"""
+        broadcast_address = netutils.get_broadcast_from_iface("eth0")
 
         # Start loop listening for UDP messages on port 5076
         loop = asyncio.get_running_loop()
-        _, protocol = await loop.create_datagram_endpoint(self.UDPReceiveOnceProtocol, local_addr=("0.0.0.0", 5076))
+        _, protocol = await loop.create_datagram_endpoint(
+            self.UDPReceiveOnceProtocol, local_addr=(broadcast_address, 5076)
+        )
 
         # Give it a little time to fully setup
         await asyncio.sleep(0.1)
 
         # Send a fragmented UDP message. We ensure fragmentation by making the message payload long
-        toolong_msg = b"abcdefghij" * 500
-        self.send_udp_broadcast(toolong_msg)
+        toolong_msg = b"abcdefghij" * 100
+        self.send_udp_broadcast(toolong_msg, broadcast_address)
 
         # Give them time to arrive
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(2)
 
         self.assertEqual(protocol.message, toolong_msg)
 
@@ -163,12 +165,15 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
     # Mocking out the UDPRelayReceive has a primary purpose of letting us test that the fragments
     # are transmitted as expected, but it also serves to disable rebroadcasts and thus mitigate
     # the risk of a mini packet storm
+    @unittest.skip("Need to see logging only for fragments_rebroadcast test")
     @patch("snowsignal.udp_relay_transmit.UDPRelayTransmit.l2filter", return_value=True)
     @patch("snowsignal.udp_relay_receive.UDPRelayReceive.datagram_received")
     async def test_fragments_rebroadcast(self, mock_datagram_received: unittest.mock.AsyncMock, _):
         """Integration test to check what happens when we send a packet with a payload so
         large that it will become fragmented in an IPv4 environment
         """
+        broadcast_address = netutils.get_broadcast_from_iface("eth0")
+
         # Start main, note that we can't use the loopback interface as we won't see packet
         # fragmentation on that interface. That makes this test very brittle
         main_task = asyncio.create_task(snowsignal.main("--target-interface=eth0 -ll=debug", loop_forever=True))
@@ -180,7 +185,7 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
         toolong_msg = b""
         for i in range(500):
             toolong_msg += f"test{i:03d}".encode()
-        self.send_udp_broadcast(toolong_msg)
+        self.send_udp_broadcast(toolong_msg, broadcast_address)
 
         # And some time for packets to fly around
         await asyncio.sleep(0.25)
