@@ -173,6 +173,12 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
         large that it will become fragmented in an IPv4 environment
         """
         broadcast_address = netutils.get_broadcast_from_iface("eth0")
+        logger.debug(
+            "iface = %s, local_addr = %s, broadcast_addr = %s",
+            "eth0",
+            netutils.get_localipv4_from_iface("eth0"),
+            broadcast_address,
+        )
 
         # Start main, note that we can't use the loopback interface as we won't see packet
         # fragmentation on that interface. That makes this test very brittle
