@@ -122,7 +122,7 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         return ip_packet
 
     def datagram_received(self, data: bytes, addr: tuple[str | Any, int]) -> None:
-        """Receive a UDP message and forward it to the remote relays"""
+        """Receive a UDP message and forward it any listeners on our local broadcast network segment"""
         logger.debug(
             "Received from %s for rebroadcast on port %i message: %r",
             addr,
