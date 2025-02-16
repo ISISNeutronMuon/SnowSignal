@@ -184,7 +184,7 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
         main_task = asyncio.create_task(snowsignal.main("--target-interface=eth0 -ll=debug", loop_forever=True))
 
         # Give time for setup to happen
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.1)
 
         # Send a fragmented UDP message. We ensure fragmentation by making the message payload long
         toolong_msg = b""
@@ -193,7 +193,7 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
         self.send_udp_broadcast(toolong_msg, broadcast_address)
 
         # And some time for packets to fly around
-        await asyncio.sleep(0.25)
+        await asyncio.sleep(0.5)
 
         # Then test if it all worked! We attempt to reassemble the packet payload from the fragments
         # by looping throuhg the calls to datagram_received and examining the data argument
