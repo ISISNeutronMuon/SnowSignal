@@ -220,7 +220,7 @@ class UDPRelayTransmit:
         with socket.socket(
             socket.AF_PACKET,
             socket.SOCK_RAW,
-            socket.ntohs(0x0800),  # pylint: disable=no-member
+            # socket.ntohs(0x0800),  # pylint: disable=no-member
         ) as sock:
             sock.setblocking(False)
 
@@ -290,6 +290,8 @@ class UDPRelayTransmit:
                 # Send to other relays
                 await self._send_to_relays_packet(packet)
                 self._loop_forever = self._continue_while_loop()
+
+        logger.debug("UDPRelayTransmit no longer listening for raw packets")
 
     def _continue_while_loop(self) -> bool:
         """This function exists purely to allow unit testing of the start() function above"""
