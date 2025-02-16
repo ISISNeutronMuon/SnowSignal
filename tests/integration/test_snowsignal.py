@@ -190,7 +190,7 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
         toolong_msg = b""
         for i in range(500):
             toolong_msg += f"test{i:03d}".encode()
-        self.send_udp_broadcast(toolong_msg, broadcast_address)
+        self.send_udp_broadcast(toolong_msg)
 
         # And some time for packets to fly around
         await asyncio.sleep(0.5)
