@@ -173,7 +173,7 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
 
         # Start main, note that we can't use the loopback interface as we won't see packet
         # fragmentation on that interface. That makes this test very brittle
-        main_task = asyncio.create_task(snowsignal.main("--target-interface=eth0", loop_forever=True))
+        main_task = asyncio.create_task(snowsignal.main("--target-interface=eth0 -ll=debug", loop_forever=True))
 
         # Give time for setup to happen
         await asyncio.sleep(1)

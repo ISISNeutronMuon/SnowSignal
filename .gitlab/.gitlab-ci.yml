@@ -31,7 +31,7 @@ format:
 Run unittests:
   <<: *test_job_template
   script:
-    - python -m coverage run --source=. -m unittest discover tests/
+    - python -m coverage run --source=. -m unittest discover tests/integration/
     - coverage report -m
     - coverage xml
   coverage: '/TOTAL.*\s+(\d+\%)/'
@@ -55,6 +55,7 @@ Publish:
     - TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token 
       python -m twine upload --skip-existing --repository-url 
                              ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
+
 Rebuild Image: 
   stage: build
   image: docker
