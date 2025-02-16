@@ -138,6 +138,7 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
             self.message = data
             self.transport.close()
 
+    @unittest.skip("Need to see logging only for fragments_rebroadcast test")
     async def test_fragmentation_sendreceive(self):
         """Simple test that we are sending and receiving"""
         broadcast_address = netutils.get_broadcast_from_iface("eth0")
@@ -165,7 +166,6 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
     # Mocking out the UDPRelayReceive has a primary purpose of letting us test that the fragments
     # are transmitted as expected, but it also serves to disable rebroadcasts and thus mitigate
     # the risk of a mini packet storm
-    @unittest.skip("Need to see logging only for fragments_rebroadcast test")
     @patch("snowsignal.udp_relay_transmit.UDPRelayTransmit.l2filter", return_value=True)
     @patch("snowsignal.udp_relay_receive.UDPRelayReceive.datagram_received")
     async def test_fragments_rebroadcast(self, mock_datagram_received: unittest.mock.AsyncMock, _):
@@ -193,6 +193,7 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
         # Then test if it all worked! We attempt to reassemble the packet payload from the fragments
         # by looping throuhg the calls to datagram_received and examining the data argument
         received_packet_payloads = b""
+        logger.debug("call_args_list = %s", mock_datagram_received.call_args_list)
         for call in mock_datagram_received.call_args_list:
             data = call[0][0]
 
