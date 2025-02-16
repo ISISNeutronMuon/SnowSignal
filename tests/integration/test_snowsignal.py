@@ -28,7 +28,6 @@ scapy.config.conf.logLevel = logging.ERROR
 logger = logging.getLogger(__name__)
 
 
-@unittest.skip("Need to see logging only for fragments_rebroadcast test")
 class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
     """Test the asynch functions in snowsignal.py"""
 
@@ -83,7 +82,6 @@ class TestSnowSignalAsynch(unittest.IsolatedAsyncioTestCase):
         main_task.cancel()
 
 
-@unittest.skip("Need to see logging only for fragments_rebroadcast test")
 class TestSnowSignalSynch(unittest.TestCase):
     """Test the non-asynch functions in snowsignal"""
 

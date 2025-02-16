@@ -175,7 +175,6 @@ class TestPVAMessageSearch(unittest.TestCase):
             PVAccessSearchMessage(raw_message, Endianness.LITTLEEND)
 
 
-@unittest.skip("Need to see logging only for fragments_rebroadcast test")
 class TestPVAPacketLog(unittest.TestCase):
     """Test the logging of bad or invalid packets"""
 

@@ -14,7 +14,6 @@ from snowsignal import packet
 from snowsignal.netutils import machine_readable_mac
 
 
-@unittest.skip("Need to see logging only for fragments_rebroadcast test")
 class TestPacketMethods(unittest.TestCase):
     """Test functions for decoding raw packets"""
 
