@@ -45,6 +45,11 @@ class UDPRelayTransmit:
     # We need a cache to store potential UDP fragments
     _fragcache = cachetools.TTLCache(maxsize=1024, ttl=1)
 
+    # This next bit is supplied only so that the testing may override it
+    # define ETH_P_ALL    0x0003          /* Every packet (be careful!!!) */
+    # define ETH_P_IP     0x0800          IP packets only; I believe this is IPv4
+    _packet_filter = 0x0800
+
     def __init__(
         self,
         remote_relays: Sequence[ipaddress.IPv4Address | ipaddress.IPv6Address | str],
@@ -218,10 +223,9 @@ class UDPRelayTransmit:
         # define ETH_P_ALL    0x0003          /* Every packet (be careful!!!) */
         # define ETH_P_IP     0x0800          IP packets only; I believe this is IPv4
         with socket.socket(
-            socket.AF_PACKET,
+            socket.AF_PACKET,  # type: ignore - not available on Windows
             socket.SOCK_RAW,
-            socket.ntohs(0x0003),
-            # socket.ntohs(0x0800),  # pylint: disable=no-member
+            socket.ntohs(self._packet_filter),
         ) as sock:
             sock.setblocking(False)
 

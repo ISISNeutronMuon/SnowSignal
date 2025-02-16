@@ -109,11 +109,11 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
     """Test sending a valid fragmented UDP packet"""
 
     ## This is often needed to understand what the hell is going on in this complex integration test
-    logging.basicConfig(
-        format="%(asctime)s - %(levelname)s - %(name)s.%(funcName)s: %(message)s",
-        encoding="utf-8",
-        level=logging.DEBUG,
-    )
+    # logging.basicConfig(
+    #     format="%(asctime)s - %(levelname)s - %(name)s.%(funcName)s: %(message)s",
+    #     encoding="utf-8",
+    #     level=logging.DEBUG,
+    # )
 
     def send_udp_broadcast(self, message: bytes, broadcast_address="255.255.255.255", port: int = 5076):
         """Send a UDP broadcast message"""
@@ -163,6 +163,7 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
     # Mocking out the UDPRelayReceive has a primary purpose of letting us test that the fragments
     # are transmitted as expected, but it also serves to disable rebroadcasts and thus mitigate
     # the risk of a mini packet storm
+    @patch("snowsignal.udp_relay_transmit.UDPRelayTransmit._packet_filter", 0x0003)
     @patch("snowsignal.udp_relay_transmit.UDPRelayTransmit.l2filter", return_value=True)
     @patch("snowsignal.udp_relay_receive.UDPRelayReceive.datagram_received")
     async def test_fragments_rebroadcast(self, mock_datagram_received: unittest.mock.AsyncMock, _):
@@ -177,42 +178,50 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
             broadcast_address,
         )
 
-        # Start main, note that we can't use the loopback interface as we won't see packet
-        # fragmentation on that interface. That makes this test very brittle
-        main_task = asyncio.create_task(snowsignal.main("--target-interface=eth0 -ll=debug", loop_forever=True))
+        # Start main. But first we need to determine if we're in the GitLab CI/CD environment. If we are then
+        # for reasons that aren't clear to me we see only PACKET_OUTGOING and no PACKET_BROADCAST as we'd expect.
+        # Outside of the GitLab CI/CD environment we can just use the usual default behaviour. In this case that's
+        # to expect
+        if os.environ.get("GITLAB_CI", False):
+            packet_filter = 0x0003
+        else:
+            packet_filter = 0x0800
 
-        # Give time for setup to happen
-        await asyncio.sleep(0.1)
+        with patch("snowsignal.udp_relay_transmit.UDPRelayTransmit._packet_filter", packet_filter):
+            main_task = asyncio.create_task(snowsignal.main("--target-interface=eth0 -ll=debug", loop_forever=True))
 
-        # Send a fragmented UDP message. We ensure fragmentation by making the message payload long
-        toolong_msg = b""
-        for i in range(500):
-            toolong_msg += f"test{i:03d}".encode()
-        self.send_udp_broadcast(toolong_msg, broadcast_address)
+            # Give time for setup to happen
+            await asyncio.sleep(0.1)
 
-        # And some time for packets to fly around
-        await asyncio.sleep(0.5)
+            # Send a fragmented UDP message. We ensure fragmentation by making the message payload long
+            toolong_msg = b""
+            for i in range(500):
+                toolong_msg += f"test{i:03d}".encode()
+            self.send_udp_broadcast(toolong_msg, broadcast_address)
 
-        # Then test if it all worked! We attempt to reassemble the packet payload from the fragments
-        # by looping throuhg the calls to datagram_received and examining the data argument
-        received_packet_payloads = b""
-        logger.debug("call_args_list = %s", mock_datagram_received.call_args_list)
-        for call in mock_datagram_received.call_args_list:
-            data = call[0][0]
+            # And some time for packets to fly around
+            await asyncio.sleep(0.25)
 
-            if data[0:2] == b"SS":
-                data = data[2:]
-            else:
-                self.fail("Unexpected data format received; did not start with magic bytes 'SS'")
+            # Then test if it all worked! We attempt to reassemble the packet payload from the fragments
+            # by looping throuhg the calls to datagram_received and examining the data argument
+            received_packet_payloads = b""
+            logger.debug("call_args_list = %s", mock_datagram_received.call_args_list)
+            for call in mock_datagram_received.call_args_list:
+                data = call[0][0]
 
-            # First fragment is UDP but later ones are not
-            packet = scapy.layers.l2.Ether(data)
-            try:
-                received_packet_payloads += bytes(packet[scapy.layers.inet.UDP].payload)
-            except IndexError:
-                received_packet_payloads += bytes(packet[scapy.layers.inet.IP].payload)
+                if data[0:2] == b"SS":
+                    data = data[2:]
+                else:
+                    self.fail("Unexpected data format received; did not start with magic bytes 'SS'")
 
-        self.assertEqual(received_packet_payloads, toolong_msg)
+                # First fragment is UDP but later ones are not
+                packet = scapy.layers.l2.Ether(data)
+                try:
+                    received_packet_payloads += bytes(packet[scapy.layers.inet.UDP].payload)
+                except IndexError:
+                    received_packet_payloads += bytes(packet[scapy.layers.inet.IP].payload)
 
-        # Quit main, though it probably quits anyway
-        main_task.cancel()
+            self.assertEqual(received_packet_payloads, toolong_msg)
+
+            # Quit main, though it probably quits anyway
+            main_task.cancel()
