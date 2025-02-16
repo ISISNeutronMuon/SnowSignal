@@ -211,6 +211,9 @@ class UDPRelayTransmit:
 
     async def start(self) -> None:
         """Monitor for UDP broadcasts on the specified port"""
+
+        logger.debug("UDPRelayTransmit starting to listen for raw packets")
+
         # create a AF_PACKET type raw socket (thats basically packet level)
         # define ETH_P_ALL    0x0003          /* Every packet (be careful!!!) */
         # define ETH_P_IP     0x0800          IP packets only; I believe this is IPv4
