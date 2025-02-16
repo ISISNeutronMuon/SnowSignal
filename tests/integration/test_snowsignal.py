@@ -169,8 +169,6 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
         """Integration test to check what happens when we send a packet with a payload so
         large that it will become fragmented in an IPv4 environment
         """
-        broadcast_address = netutils.get_broadcast_from_iface("eth0")
-
         # Start main, note that we can't use the loopback interface as we won't see packet
         # fragmentation on that interface. That makes this test very brittle
         main_task = asyncio.create_task(snowsignal.main("--target-interface=eth0 -ll=debug", loop_forever=True))
@@ -182,7 +180,7 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
         toolong_msg = b""
         for i in range(500):
             toolong_msg += f"test{i:03d}".encode()
-        self.send_udp_broadcast(toolong_msg, broadcast_address)
+        self.send_udp_broadcast(toolong_msg)
 
         # And some time for packets to fly around
         await asyncio.sleep(0.25)
