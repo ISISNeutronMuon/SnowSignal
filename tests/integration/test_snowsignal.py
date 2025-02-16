@@ -138,7 +138,6 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
             self.message = data
             self.transport.close()
 
-    @unittest.skip("Need to see logging only for fragments_rebroadcast test")
     async def test_fragmentation_sendreceive(self):
         """Simple test that we are sending and receiving"""
         broadcast_address = netutils.get_broadcast_from_iface("eth0")
