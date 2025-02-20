@@ -31,7 +31,7 @@ format:
 Run unittests:
   <<: *test_job_template
   script:
-    - python -m coverage run --source=. -m unittest discover tests/integration/
+    - python -m coverage run --source=. -m unittest discover tests/
     - coverage report -m
     - coverage xml
   coverage: '/TOTAL.*\s+(\d+\%)/'
