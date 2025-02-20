@@ -1,5 +1,5 @@
-FROM debian
+FROM python:3.13
 
-RUN apt update && apt install -y socat tcpdump
+RUN apt update && apt install -y socat tcpdump git
 
 CMD ["sleep", "infinity"]

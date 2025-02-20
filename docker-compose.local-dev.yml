@@ -10,8 +10,8 @@ services:
         hostname: server1
         container_name: server1
         build:
-            context: ./snowsignal
-        command: "sleep infinity"
+            context: ./tests
+        command: "sh /snowsignal/tests/testenv.sh"
         volumes:
             - .:/snowsignal/
         networks:
@@ -22,8 +22,8 @@ services:
         hostname: server2
         container_name: server2
         build:
-            context: ./snowsignal
-        command: "sleep infinity"
+            context: ./tests
+        command: "sh /snowsignal/tests/testenv.sh"
         volumes:
             - .:/snowsignal/
         networks:
