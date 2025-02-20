@@ -26,7 +26,7 @@ class ConfigArgs(NamedTuple):
 def configure(argv: Sequence[str] | None = None) -> ConfigArgs:
     """Setup configuration for the SnowSignal service"""
 
-    p = configargparse.ArgParser()
+    p = configargparse.ArgParser(prog="snowsignal")
     # Remember to add new arguments to the Args class above!
     p.add_argument(
         "-t",
