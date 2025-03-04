@@ -49,7 +49,7 @@ Publish:
   stage: pypi
   when: on_success
   image: python:latest
-  variable:
+  variables:
     - GIT_DEPTH: 0
   script:
     - export
