@@ -169,6 +169,12 @@ class UDPRelayTransmit:
         return True
 
     def filter_fragment(self, packet: Packet) -> bool:
+        """
+        We have identified this as a UDP packet fragment. If it the first fragment we apply the
+        l4filter and then cache an identifier so that we may apply the result of that filter to
+        the subsequent fragments.
+        """
+
         # If this is the first packet then if will have a fragment offset of 0. Importantly,
         # we should still be able to evaluate it as a UDP packet and thus see if it satisfies
         # our filters. If it doesn't then neither will subsequent fragments. However, if it
@@ -207,8 +213,8 @@ class UDPRelayTransmit:
                 )
                 return False
 
-            # If this is the final fragment, indicated by the More Fragments flag being False but the Fragment Offset being >0,
-            # then we need to remove its identifier from the fragment cache
+            # If this is the final fragment, indicated by the More Fragments flag being False but the Fragment Offset
+            # being >0, then we need to remove its identifier from the fragment cache
             if not packet.ipv4_more_fragments:
                 self._fragcache.pop(fragid)
 

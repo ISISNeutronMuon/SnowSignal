@@ -194,4 +194,11 @@ class Packet:
         # in the first fragment.
         # We can identify a last fragment by the More Fragments flag being False and the Fragment Offset being non-zero.
         # A non-fragmented IP packet will have the More Fragments flag set False and the Fragment Offset equal to zero.
+        logger.debug(
+            "ip_version = %i, ipv4_more_fragments = %s, ipv4_fragmented_offset = %i",
+            self.ip_version,
+            self.ipv4_more_fragments,
+            self.ipv4_fragmented_offset,
+        )
+
         return self.ip_version == 4 and (self.ipv4_more_fragments or self.ipv4_fragmented_offset != 0)
