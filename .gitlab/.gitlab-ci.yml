@@ -49,7 +49,10 @@ Publish:
   stage: pypi
   when: on_success
   image: python:latest
+  variable:
+    - GIT_DEPTH: 0
   script:
+    - export
     - pip install .[dist]
     - python -m build
     - TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token 
