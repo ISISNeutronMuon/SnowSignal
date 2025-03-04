@@ -138,3 +138,42 @@ class TestPacketMethods(unittest.TestCase):
         truncated_packet = packet.Packet(good_ipv6_packet[0:55])
         truncated_packet.decode_ip()
         self.assertRaises(packet.BadPacketException, truncated_packet.decode_udp)
+
+    def test_udp_packet_fragment(self):
+        """Test handling of a last UDP fragment"""
+
+        fragment_packet = packet.Packet(
+            b"\xff\xff\xff\xff\xff\xff\x02B\n\x00\x03\xb5\x08\x00E\x00\x00'\x16\xde\x00\xb2@\x11G\x83\n\x00\x03\xb5\n\x00\x03\xff:LADA:MRE:DOUBLE:51"
+        )
+        fragment_packet.decode_ethernet()
+        fragment_packet.decode_ip()
+
+    def test_isfragment(self):
+        """Test various packets to see if they trigger the correct behaviour of the is_ipv4_fragmented method"""
+
+        pack = packet.Packet(self._create_ipv6_udp_frame())
+        pack.decode_ip()
+        pack.decode_udp()
+
+        self.assertFalse(pack.is_ipv4_fragmented())
+
+        pack = packet.Packet(self._create_ipv4_udp_frame())
+        pack.decode_ip()
+        pack.decode_udp()
+
+        self.assertFalse(pack.is_ipv4_fragmented())
+
+        pack.ipv4_more_fragments = True
+        self.assertTrue(pack.is_ipv4_fragmented())
+
+        pack.ipv4_more_fragments = False
+        pack.ipv4_fragmented_offset = 1
+        self.assertTrue(pack.is_ipv4_fragmented())
+
+        fragment_packet = packet.Packet(
+            b"\xff\xff\xff\xff\xff\xff\x02B\n\x00\x03\xb5\x08\x00E\x00\x00'\x16\xde\x00\xb2@\x11G\x83\n\x00\x03\xb5\n\x00\x03\xff:LADA:MRE:DOUBLE:51"
+        )
+        fragment_packet.decode_ethernet()
+        fragment_packet.decode_ip()
+
+        self.assertTrue(fragment_packet.is_ipv4_fragmented())
