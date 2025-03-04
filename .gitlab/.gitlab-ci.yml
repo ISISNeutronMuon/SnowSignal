@@ -50,7 +50,7 @@ Publish:
   when: on_success
   image: python:latest
   variables:
-    - GIT_DEPTH: 0
+    GIT_DEPTH: 0
   script:
     - export
     - pip install .[dist]
