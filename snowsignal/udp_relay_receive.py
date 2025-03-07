@@ -5,13 +5,10 @@ This uses the standard asyncio.DatagramProtocol base class so most of the initia
 management of the UDP packet is already done for us.
 """
 
-import array
 import asyncio
 import ipaddress
 import logging
 import socket
-import struct
-from copy import deepcopy
 from typing import Any
 
 from .configure import ConfigArgs
@@ -64,63 +61,6 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         # What does connection lost even mean for UDP?
         # Seems only necessary to stop some spurious errors on server shutdown
 
-    def recalculate_udp_checksum(self, ip_packet) -> bytes:
-        """Calculate UDP checksum, using the IP and UDP parts of the packet,
-        and change the existing packet UDP checksum with the newly calculcated
-        checksum"""
-        logger.debug("Recalculating UDP checksum")
-
-        # The UDP checksum algorithm is defined in RFC768
-        # https://www.rfc-editor.org/rfc/rfc768.txt
-        # "Checksum is the 16-bit one's complement of the one's complement sum of a
-        #  pseudo header of information from the IP header, the UDP header, and the
-        #  data, padded with zero octets at the end (if necessary) to make a
-        #  multiple of two octets"
-
-        # Extract the data needed to form the pseudo packet and header
-        # Got this from https://dev.to/cwprogram/python-networking-tcp-and-udp-4i3l
-
-        # Make a deepcopy of the UDP portion of the whole ip_packet so that we don't
-        # accidentally modify it. Then zero the part that contains the UDP checksum.
-        # A zero checksum is valid but we'll calculate the correct value
-        pseudo_packet = bytearray(deepcopy(ip_packet[20:]))
-        pseudo_packet[6] = 0x0
-        pseudo_packet[7] = 0x0
-
-        # We need information from the IP header to construct the pseudo-header
-        # needed in turn to calculate the UDP checksum. Specifically we need the
-        # source and destination IP addresses
-        ip_header = struct.unpack("!BBHHHBBH4s4s", ip_packet[0:20])
-        pseudo_header = struct.pack("!4s4sHH", ip_header[8], ip_header[9], socket.IPPROTO_UDP, len(pseudo_packet))
-
-        # Combine the pseudo header and pseudo packet to form a complete pseudo packet
-        # that we'll perform the checksum calculations on
-        checksum_packet = pseudo_header + pseudo_packet
-
-        # If there is an odd number of bytes in the checksum packet we need to
-        # pad it to an even number of bytes
-        if len(checksum_packet) % 2 == 1:
-            checksum_packet += b"\0"
-
-        # The checksum calculation proceeds by summing the one’s complement where
-        # all binary 0s become 1s, of all 16-bit words in these components.
-        onecompsum = sum(array.array("H", checksum_packet))
-        onecompsum = (onecompsum >> 16) + (onecompsum & 0xFFFF)
-        onecompsum += onecompsum >> 16
-        onecompsum = ~onecompsum  # Finally invert the bits
-
-        # Test endianness and do some magic if we're on a little endian system
-        if struct.pack("H", 1) != b"\x00\x01":
-            onecompsum = ((onecompsum >> 8) & 0xFF) | onecompsum << 8
-
-        # If checksum is 0 change it to 0xFFFF to signal it has been calculated
-        udp_checksum = onecompsum & 0xFFFF
-
-        # Insert the calculated checksum into the IP + UDP packet
-        ip_packet = ip_packet[:26] + udp_checksum.to_bytes(2, "big") + ip_packet[28:]
-
-        return ip_packet
-
     def datagram_received(self, data: bytes, addr: tuple[str | Any, int]) -> None:
         """Receive a UDP message and forward it any listeners on our local broadcast network segment"""
         logger.debug(
@@ -131,7 +71,8 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         )
 
         # Simple verification of the received payload, and remove the bytes
-        # confirming that this is for us
+        # confirming that this is for us. We also remove the ethernet frame as the
+        # sendto() below will take care of that part
         if data[0:2] == b"SS":
             data = data[2:]
         else:
@@ -140,21 +81,13 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
 
         # TODO: Apply any filters
 
-        # # We can't use the data as is for some reason but need to recalculate the
-        # # UDP checksum. We also remove the ethernet frame as the sendto() below
-        # # will take care of that part
-        # data = self.recalculate_udp_checksum(data[14:])
-
-        # Remove ethernet frame
-        data = data[14:]
-
         # TODO: The code above does not change the IP source address
         # If we're on a different network segment then we should switch the
         # broadcast IP address to use get_broadcast_from_iface(). This will
         # then require recomputing checksums. Note: is this required? We
         # are sending to the broadcast address in the sendto() below
 
-        # TODO: Logic to validate what we're receiving as a PVAccess message
+        # TODO: Logic to validate what we're receiving a PVAccess message
         # Note that although doing the validation on receipt means we're doing
         # it for every relay (instead of once if we did it on send), it's much
         # safer to do it on receipt since it means we don't have to trust the
