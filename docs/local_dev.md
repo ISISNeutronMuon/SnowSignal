@@ -25,6 +25,9 @@ socat - udp-datagram:255.255.255.255:5076,broadcast
 ```
 will allow a user to type text and press enter to send it as the payload of a UDP broadcast message.
 
+> [!caution]
+> 'socat' (and `nc`) do not produce valid UDP checksums in their broadcasts. If SnowSignal rebroadcasts a packet from one of these sources it may appear to have an invalid UDP checksum.
+
 `tcpdump` is used to show a raw dump of received network packets. This command line 
 ```
 tcpdump -e -i eth0 udp and broadcast -vv -X
