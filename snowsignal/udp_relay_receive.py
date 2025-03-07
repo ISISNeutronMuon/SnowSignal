@@ -140,10 +140,13 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
 
         # TODO: Apply any filters
 
-        # We can't use the data as is for some reason but need to recalculate the
-        # UDP checksum. We also remove the ethernet frame as the sendto() below
-        # will take care of that part
-        data = self.recalculate_udp_checksum(data[14:])
+        # # We can't use the data as is for some reason but need to recalculate the
+        # # UDP checksum. We also remove the ethernet frame as the sendto() below
+        # # will take care of that part
+        # data = self.recalculate_udp_checksum(data[14:])
+
+        # Remove ethernet frame
+        data = data[14:]
 
         # TODO: The code above does not change the IP source address
         # If we're on a different network segment then we should switch the
