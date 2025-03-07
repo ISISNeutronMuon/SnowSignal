@@ -74,7 +74,7 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         # confirming that this is for us. We also remove the ethernet frame as the
         # sendto() below will take care of that part
         if data[0:2] == b"SS":
-            data = data[2:]
+            data = data[16:]
         else:
             logger.debug("Malformed packet received")
             return
