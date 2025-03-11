@@ -118,7 +118,14 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
         # It doesn't feel much simpler but we're not using fully raw sockets here
         # but instead letting Python do the work of handling the Ethernet frames
         sendbytes = self._rebroad_sock.sendto(data, (self._broadcast_addr, self.broadcast_port))
-        logger.debug("Broadcast UDP packet of length %d on iface %s: %s", sendbytes, self._iface, data)
+        logger.debug(
+            "Broadcast UDP packet of length %d to (%s,%s) on iface %s: %s",
+            sendbytes,
+            self._broadcast_addr,
+            self.broadcast_port,
+            self._iface,
+            data,
+        )
 
     async def start(self) -> None:
         """Start the UDP server that listens for messages from other relays and broadcasts them"""
