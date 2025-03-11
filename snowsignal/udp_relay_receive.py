@@ -108,6 +108,8 @@ class UDPRelayReceive(asyncio.DatagramProtocol):
             packet = Packet(b"\xff\xff\xff\xff\xff\xff\x02B\xac\x16\x00\x02\x08\x00" + data)
             packet.decode_ip()
             packet.decode_udp()
+            logger.debug(Packet)
+
             packet_src_ip = packet.ip_src_addr
 
             log_pvaccess(data[28:], packet_src_ip)
