@@ -10,6 +10,7 @@ services:
       mode: global
       placement:
          max_replicas_per_node: 1
+    restart: unless-stopped
 
   probe:
     image: harbor.stfc.ac.uk/isis-accelerator-controls/internal-pvagw-tests
