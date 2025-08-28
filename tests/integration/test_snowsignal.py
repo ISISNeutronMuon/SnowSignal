@@ -181,11 +181,11 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
         # Start main. But first we need to determine if we're in the GitLab CI/CD environment. If we are then
         # for reasons that aren't clear to me we see only PACKET_OUTGOING and no PACKET_BROADCAST as we'd expect.
         # Outside of the GitLab CI/CD environment we can just use the usual default behaviour. In this case that's
-        # to expect
-        if os.environ.get("GITLAB_CI", False):
-            packet_filter = 0x0003
+        # to filter so we only see IP packets
+        if os.environ.get("GITLAB_CI", False) or os.environ.get("GITHUB_ACTIONS", False):
+            packet_filter = 0x0003  # ETH_P_ALL, i.e. all packets
         else:
-            packet_filter = 0x0800
+            packet_filter = 0x0800  # ETH_P_IP, i.e. IP packets
 
         with patch("snowsignal.udp_relay_transmit.UDPRelayTransmit._packet_filter", packet_filter):
             main_task = asyncio.create_task(snowsignal.main("--target-interface=eth0 -ll=debug", loop_forever=True))
