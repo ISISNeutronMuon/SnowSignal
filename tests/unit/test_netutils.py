@@ -14,11 +14,11 @@ class TestNetUtilsFunctions(unittest.TestCase):
     def test_get_ips_from_name(self):
         """Test getting IP addresses from a domain name"""
         # Check that the function returns one or more IP addresses
-        ips = netutils.get_ips_from_name("example.com")
+        ips = netutils.get_ips_from_name("localhost")
 
         self.assertIsInstance(ips, list)
         self.assertTrue(len(ips))
-        self.assertTrue(ipaddress.IPv4Address("96.7.128.175") in ips)
+        self.assertTrue(ipaddress.IPv4Address("127.0.0.1") in ips)
         for ip in ips:
             self.assertIsInstance(ip, (ipaddress.IPv4Address, ipaddress.IPv6Address))
 
