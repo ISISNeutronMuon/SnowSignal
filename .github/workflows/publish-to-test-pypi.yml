@@ -45,7 +45,7 @@ jobs:
     - name: Run tests
       run: |
         PYTHON_PATH=$(which python)
-        sudo $PYTHON_PATH -m coverage run --source=. -m unittest discover tests/
+        sudo -E $PYTHON_PATH -m coverage run --source=. -m unittest discover tests/
     - name: Gather coverage statistics
       if: ${{ always() }}
       run: |

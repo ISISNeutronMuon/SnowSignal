@@ -163,7 +163,7 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
     # Mocking out the UDPRelayReceive has a primary purpose of letting us test that the fragments
     # are transmitted as expected, but it also serves to disable rebroadcasts and thus mitigate
     # the risk of a mini packet storm
-    @unittest.skipIf(os.environ.get("GITHUB_ACTIONS", False), "GitHub Actions not supported")
+    @unittest.skipIf(os.environ.get("GITHUB_ACTION", False), "GitHub Actions not supported")
     @patch("snowsignal.udp_relay_transmit.UDPRelayTransmit._packet_filter", 0x0003)
     @patch("snowsignal.udp_relay_transmit.UDPRelayTransmit.l2filter", return_value=True)
     @patch("snowsignal.udp_relay_receive.UDPRelayReceive.datagram_received")
