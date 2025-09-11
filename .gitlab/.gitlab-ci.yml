@@ -1,7 +1,7 @@
 stages:
   - format-lint
   - test
-  - pypi
+  - publish
   - build
   - deploy
 
@@ -46,7 +46,7 @@ Run unittests:
 
 Publish:
   <<: *before_script_template
-  stage: pypi
+  stage: publish
   when: on_success
   image: python:latest
   variables:
@@ -55,9 +55,8 @@ Publish:
     - export
     - pip install .[dist]
     - python -m build
-    - TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token 
-      python -m twine upload --skip-existing --repository-url 
-                             ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
+    - HATCH_INDEX_AUTH=${CI_JOB_TOKEN} HATCH_INDEX_USER=gitlab-ci-token 
+      python -m hatch publish -r ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
 
 Rebuild Image: 
   stage: build

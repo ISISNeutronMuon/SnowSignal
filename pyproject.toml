@@ -39,7 +39,7 @@ test = [
 ]
 dist = [
   "build>=1.2",
-  "twine>=6.1",
+  "hatch>=1.14",
 ]
 
 [build-system]
