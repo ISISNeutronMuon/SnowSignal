@@ -163,6 +163,7 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
     # Mocking out the UDPRelayReceive has a primary purpose of letting us test that the fragments
     # are transmitted as expected, but it also serves to disable rebroadcasts and thus mitigate
     # the risk of a mini packet storm
+    @unittest.skipIf(os.environ.get("GITHUB_ACTIONS", False), "GitHub Actions not supported")
     @patch("snowsignal.udp_relay_transmit.UDPRelayTransmit._packet_filter", 0x0003)
     @patch("snowsignal.udp_relay_transmit.UDPRelayTransmit.l2filter", return_value=True)
     @patch("snowsignal.udp_relay_receive.UDPRelayReceive.datagram_received")
@@ -182,7 +183,7 @@ class TestSnowSignalFragmented(unittest.IsolatedAsyncioTestCase):
         # for reasons that aren't clear to me we see only PACKET_OUTGOING and no PACKET_BROADCAST as we'd expect.
         # Outside of the GitLab CI/CD environment we can just use the usual default behaviour. In this case that's
         # to filter so we only see IP packets
-        if os.environ.get("GITLAB_CI", False) or os.environ.get("GITHUB_ACTIONS", False):
+        if os.environ.get("GITLAB_CI", False):
             packet_filter = 0x0003  # ETH_P_ALL, i.e. all packets
         else:
             packet_filter = 0x0800  # ETH_P_IP, i.e. IP packets
